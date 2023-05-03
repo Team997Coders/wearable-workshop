@@ -1,0 +1,1 @@
+A sound power spectral density display on a NeoPixel array from a Circuit Python capable microprocessor.
