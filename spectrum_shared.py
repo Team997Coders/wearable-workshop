@@ -21,12 +21,13 @@ def get_log_freq_powers(spectrum: np.ndarray, num_groups: int):
     :return:
     '''
     lr = log_range(len(spectrum), num_groups)
-    lr = np.around(lr) #Round cutoffs to nearest integer so we can use them as indicies
+    #print(f"log: {lr} spec: {spectrum}")
+    lr = np.ceil(lr) #Round cutoffs to nearest integer so we can use them as indicies
     #print(f'{lr}')
     groups = np.zeros((num_groups)) # Create a place to store the sum'ed power of each frequency range
     for i in range(0, num_groups):
         groups[i] = np.sum(spectrum[int(lr[i]):int(lr[i+1])])
-        #print(f"log cutoffs: {int(lr[i])}:{int(lr[i+1])}")
+        #print(f"log cutoffs: {int(lr[i])}:{int(lr[i+1])} {spectrum[int(lr[i]):int(lr[i+1])]}")
 
     return groups
 
@@ -44,12 +45,20 @@ def get_freq_powers(spectrum: np.ndarray, num_groups: int):
 
     return groups
 
-default_range_cutoffs = [0.1, 0.3, 0.6, 0.9, 1.0]
-default_base_color = [(0, 0, 0),
-              (1, 0, 0),
-              (0, 1, 0),
-              (0, 0, 1),
-              (1, 1, 1)]
+# default_range_cutoffs = [0.15, 0.35, 0.65, 0.85, 1.0]
+# default_base_color = [(0, 0, 0), #Red, Green, Blue weights for each range
+#               (1, 0, 0),
+#               (0, 1, 0),
+#               (0, 0, 1),
+#               (1, 1, 1)]
+
+default_range_cutoffs = (0.15, 0.25, 0.45, 0.65, .85, 1.0)
+default_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
+                      (0, 0, 1),
+                      (0, 1, 0),
+                      (1, 1, 0),
+                      (1, 0, 0),
+                      (1, 1, 1))
 
 def map_normalized_value_to_color(normalized_value: float, colormap_index: int, color_map: list[tuple[float]] | None = None):
     '''

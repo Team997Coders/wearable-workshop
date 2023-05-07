@@ -1,3 +1,5 @@
+import math
+
 import neopixel
 import ema
 from interfaces import IDisplay
@@ -39,6 +41,12 @@ class GraphDisplay(IDisplay):
         self.last_max_group_power = [0] * self.num_cols
         self.last_min_group_power = [1 << 16] * self.num_cols
 
+        # self.min_group_power_ema = []
+        # self.max_group_power_ema = []
+        # for i in range(0, self.num_cols):
+        #     self.min_group_power_ema.append(ema.EMA(500, 2))
+        #     self.max_group_power_ema.append(ema.EMA(500, 2))
+
         self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
 
     def show(self, power_spectrum: np.array):
@@ -46,12 +54,14 @@ class GraphDisplay(IDisplay):
 
         #next, write the new row of columns on the bottom row
         #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
+        #print(f'Min: {self.last_min_group_power} Max: {self.last_max_group_power}')
         for i_col in range(self.num_cutoff_groups, len(group_power)):
             i = i_col
-            min_val = self.last_min_group_power[i] #Use the last min/max value before updating them
-            max_val = self.last_max_group_power[i]
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, group_power[i]) #Slowly decay min/max
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, group_power[i])
+
+            min_val = self.last_min_group_power[i] * 1.05 #Use the last min/max value before updating them
+            max_val = self.last_max_group_power[i] * .95
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, group_power[i]) #Slowly decay min/max
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .999, group_power[i])
 
             #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
             #self.last_min_group_power[i].add(min_val)
@@ -67,7 +77,7 @@ class GraphDisplay(IDisplay):
             elif norm_value > 1.0:
                 norm_value = 1.0
 
-            num_leds = int(self.num_rows * norm_value + 1)
+            num_leds = int(math.ceil(self.num_rows * norm_value))
             if num_leds > self.num_rows:
                 num_leds = self.num_rows
 

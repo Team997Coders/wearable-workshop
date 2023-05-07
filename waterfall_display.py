@@ -58,11 +58,11 @@ class WaterfallDisplay(IDisplay):
         for i in range(self.num_cutoff_groups, len(group_power)):
             #print(f'i: {i}')
             i_pixel = self.pixel_indexer(0, i)
-            min_val = self.last_min_group_power[i]
-            max_val = self.last_max_group_power[i]
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, group_power[i])
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.9995, group_power[i])
-            #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
+            min_val = self.last_min_group_power[i] * 1.05  # Use the last min/max value before updating them
+            max_val = self.last_max_group_power[i] * .95
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, group_power[i])
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.999, group_power[i])
+            print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
             i_range, norm_value = map_power_to_range(group_power[i], min_val, max_val)
             if i_range is None:
                 self.pixels[i_pixel] = (0, 0, 0)
