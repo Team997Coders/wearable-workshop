@@ -2,7 +2,7 @@ import neopixel
 from interfaces import IDisplay
 import ulab.numpy as np
 from spectrum_shared import map_float_color_to_neopixel_color, get_log_freq_powers, map_power_to_range, \
-    map_normalized_value_to_color
+    map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range
 
 
 class WaterfallDisplay(IDisplay):
@@ -11,6 +11,8 @@ class WaterfallDisplay(IDisplay):
     num_cols: int
     pixel_indexer: Any # typing.Callable[[int, int], int]
     pixel_values: list[list[tuple[int, int, int]]] #Stores the values
+    _log_range_indicies: np.array[int]
+    _group_power: np.array[float]
 
     def default_row_column_indexer(self, irow, icol) -> int:
         '''
@@ -38,9 +40,20 @@ class WaterfallDisplay(IDisplay):
         self.last_max_group_power = [0] * self.num_cols
         self.last_min_group_power = [1 << 16] * self.num_cols
         self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
+        self._log_range_indicies = None
+        self._group_power = None
+
 
     def show(self, power_spectrum: np.array):
-        group_power = get_log_freq_powers(power_spectrum, num_groups=self.num_total_groups)
+        if self._log_range_indicies is None:
+            range = log_range(len(power_spectrum), self.num_total_groups)
+            self._log_range_indicies = float_to_indicies(range)
+
+        self._group_power = get_freq_powers_by_range(power_spectrum,
+                                               self._log_range_indicies,
+                                               out=self._group_power)
+
+        #group_power = get_log_freq_powers(power_spectrum, num_groups=self.num_total_groups)
 
         #First, take all old pixel values, and move them up one row, except for the last row, which steps off the display
         for i_row in range(self.num_rows-2, -1, -1):
@@ -55,15 +68,15 @@ class WaterfallDisplay(IDisplay):
 
         #next, write the new row of columns on the bottom row
         #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
-        for i in range(self.num_cutoff_groups, len(group_power)):
+        for i in range(self.num_cutoff_groups, len(self._group_power)):
             #print(f'i: {i}')
             i_pixel = self.pixel_indexer(0, i)
-            min_val = self.last_min_group_power[i] * 1.05  # Use the last min/max value before updating them
-            max_val = self.last_max_group_power[i] * .95
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, group_power[i])
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.999, group_power[i])
-            print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
-            i_range, norm_value = map_power_to_range(group_power[i], min_val, max_val)
+            min_val = self.last_min_group_power[i] #* 1.05  # Use the last min/max value before updating them
+            max_val = self.last_max_group_power[i] #* .95
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, self._group_power[i])
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.999, self._group_power[i])
+            #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
+            i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val)
             if i_range is None:
                 self.pixels[i_pixel] = (0, 0, 0)
             else:

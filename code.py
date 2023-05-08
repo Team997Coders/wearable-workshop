@@ -4,6 +4,8 @@ import time
 import asyncio
 import analogio
 import board
+import analogbufio
+import array
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
@@ -14,24 +16,22 @@ import math
 from audiocore import WaveFile
 
 import ulab.utils
-
 import ema
-from sound_rec import roll_buffer, prepend_buffer, record_sample
+from sound_rec import roll_buffer, prepend_buffer, record_sample_array, record_sample_numpy
 from basic_display import BasicDisplay
 from waterfall_display import WaterfallDisplay
 from graph_display import GraphDisplay
 
-SAMPLE_RATE = 44000
-SAMPLE_SIZE = 1 << 9  # Sample size must be a power of 2
+SAMPLE_RATE = 11000
+SAMPLE_SIZE = 1 << 8  # Sample size must be a power of 2
 SAMPLE_BITE_SIZE = SAMPLE_SIZE // 4  # How much of the sample window we replace each iteration
 
 MIC_PIN = board.A1
-MIC_ADC = analogio.AnalogIn(MIC_PIN)
+#MIC_ADC = analogio.AnalogIn(MIC_PIN)
 
 NUM_NEO_ROWS = 4
 NUM_NEO_COLS = 8
 NUM_NEOS = NUM_NEO_COLS * NUM_NEO_ROWS
-
 
 def ShowLightOrder(pixels: neopixel.NeoPixel, delay: float = None):
     '''
@@ -130,38 +130,43 @@ async def Run(play_wave: bool):
     else:
         #print("Hello World! Lets record sound!")
         # Read the full buffer before we start displaying
-        sample_buffer, sample_buffer_min, sample_buffer_max = asyncio.run(record_sample(MIC_ADC, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=None))
+        #sample_buffer, sample_buffer_min, sample_buffer_max = asyncio.run(record_sample(MIC_ADC, SAMPLE_BITE_SIZE, sample_rate=SAMPLE_RATE, buffer=None))
         new_buffer = None
+        mic_buffer = array.array("H", [0x0000] * SAMPLE_SIZE)
+        mic_adc_bufferio = analogbufio.BufferedIn(MIC_PIN, sample_rate=SAMPLE_RATE)
+        mic_buffer = asyncio.run(record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, SAMPLE_RATE, mic_buffer))
+        sample_buffer = np.array(mic_buffer)
 
         #initialize the min/max values
-        min_buffer_ema = ema.EMA(500, 2)
-        max_buffer_ema = ema.EMA(500, 2)
-        min_buffer_ema.add(sample_buffer_min)
-        max_buffer_ema.add(sample_buffer_max)
+        min_buffer_ema = ema.EMA(200, 2)
+        max_buffer_ema = ema.EMA(200, 2)
+        min_buffer_ema.add(np.min(sample_buffer))
+        max_buffer_ema.add(np.max(sample_buffer))
         new_buffer_task = None #The async task to collect more data
         #print(f'Got first sample: {sample_buffer}')
         new_buffer_task = asyncio.create_task(
-            record_sample(MIC_ADC, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=new_buffer))
+            record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
         while True:
-            new_buffer, new_buffer_min, new_buffer_max = asyncio.run_until_complete(new_buffer_task)
+            mic_buffer = asyncio.run_until_complete(new_buffer_task)
             #new_buffer_task)
 
             new_buffer_task = asyncio.create_task(
-                record_sample(MIC_ADC, SAMPLE_BITE_SIZE, sample_rate=SAMPLE_RATE, buffer=new_buffer))
+                record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
+            sample_buffer = np.array(mic_buffer)
 
-            min_buffer_ema.add(new_buffer_min)
-            max_buffer_ema.add(new_buffer_max)
-            # print(f'new: {sample_buffer[0:5]}composite: {sample_buffer[SAMPLE_BITE_SIZE:SAMPLE_BITE_SIZE+5]}')
-            sample_buffer = prepend_buffer(new_buffer, sample_buffer)
+            min_buffer_ema.add(np.min(sample_buffer))
+            max_buffer_ema.add(np.max(sample_buffer))
+            #print(f'new: {sample_buffer[0:5]}composite: {sample_buffer[SAMPLE_BITE_SIZE:SAMPLE_BITE_SIZE+5]}')
+            #sample_buffer = prepend_buffer(new_buffer, sample_buffer)
             buffer_range = max_buffer_ema.ema_value - min_buffer_ema.ema_value
-            float_array = ((sample_buffer - min_buffer_ema.ema_value) / buffer_range) - 0.5
+            float_array = ((sample_buffer - (min_buffer_ema.ema_value + (buffer_range / 2))) / buffer_range)
             #float_array = float_array / np.max(float_array)
             #print(f'float: {float_array[0:10]}')
             power_spectrum = ulab.utils.spectrogram(float_array)
             display.show(power_spectrum)
             pixels.show()
 
-            sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
+            #sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
 
 
             # time.sleep(0.5)

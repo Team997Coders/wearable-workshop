@@ -1,4 +1,5 @@
 import analogio
+import analogbufio
 import array
 import time
 import ulab.numpy as np
@@ -16,7 +17,15 @@ def prepend_buffer(new_buffer, old_buffer) -> list:
     #output.extend(old_buffer)
     #return output
 
-async def record_sample(adc: analogio.AnalogIn, sample_size: int, sample_rate: int, buffer: np.array = None):
+async def record_sample_array(adcbuf: analogbufio.BufferedIn, sample_size: int, sample_rate: int, buffer = None):
+    if buffer is None:
+        buffer = array.array("H", [0x0000] * sample_size)
+
+    adcbuf.readinto(buffer)
+    return buffer
+
+
+async def record_sample_numpy(adc: analogio.AnalogIn, sample_size: int, sample_rate: int, buffer: np.array = None):
     #start = time.monotonic_ns()
     if buffer is None:
         buffer = np.zeros((sample_size))

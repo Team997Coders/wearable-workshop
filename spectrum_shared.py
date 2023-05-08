@@ -13,6 +13,36 @@ def log_range(num_measurements: list[float], num_groups: int):
     log_bin_cutoffs = np.exp(log_bin_cutoffs)
     return log_bin_cutoffs
 
+
+def float_to_indicies(input: np.array):
+    '''Convert a float array to an integer array that can be used for indexing
+    '''
+    input = np.ceil(input)  # Round cutoffs to nearest integer so we can use them as indicies
+    return np.array(input, dtype=np.uint16)
+
+
+def get_freq_powers_by_range(spectrum: np.ndarray, range_cutoffs: np.ndarray[int], out: np.ndarray[float] | None = None):
+    #print(f'{range_cutoffs} out: {out}')
+    num_groups = len(range_cutoffs) - 1
+    if out is None:
+        out = np.zeros((num_groups))  # Create a place to store the sum'ed power of each frequency range
+    elif len(out) != num_groups:
+        raise ValueError("Output array has the wrong shape")
+
+    #print(f'n: {num_groups} {range_cutoffs}')
+    for i in range(0, num_groups):
+        out[i] = np.sum(spectrum[int(range_cutoffs[i]):int(range_cutoffs[i + 1])])
+        # if i == 6:
+        #     s = spectrum[int(range_cutoffs[i]):int(range_cutoffs[i + 1])]
+        #     min_s = np.min(s)
+        #     max_s = np.max(s)
+        #     imax = np.argmax(s)
+        #     print(f'i_max: {imax} r: {range_cutoffs[i]}:{range_cutoffs[i+1]} min: {min_s:0.2f} max: {max_s:0.2f} sum: {out[i]:0.2f} s: {spectrum[int(range_cutoffs[i]):int(range_cutoffs[i + 1])]}')
+        # # print(f"log cutoffs: {int(lr[i])}:{int(lr[i+1])} {spectrum[int(lr[i]):int(lr[i+1])]}")
+
+    return out
+
+
 def get_log_freq_powers(spectrum: np.ndarray, num_groups: int):
     '''
     Divided a spectrum into num_groups evenly spaced on the log axis
@@ -23,13 +53,10 @@ def get_log_freq_powers(spectrum: np.ndarray, num_groups: int):
     lr = log_range(len(spectrum), num_groups)
     #print(f"log: {lr} spec: {spectrum}")
     lr = np.ceil(lr) #Round cutoffs to nearest integer so we can use them as indicies
+    lr = np.array(lr, dtype=np.uint16)
     #print(f'{lr}')
-    groups = np.zeros((num_groups)) # Create a place to store the sum'ed power of each frequency range
-    for i in range(0, num_groups):
-        groups[i] = np.sum(spectrum[int(lr[i]):int(lr[i+1])])
-        #print(f"log cutoffs: {int(lr[i])}:{int(lr[i+1])} {spectrum[int(lr[i]):int(lr[i+1])]}")
+    return get_freq_powers_by_range(spectrum, lr)
 
-    return groups
 
 def get_freq_powers(spectrum: np.ndarray, num_groups: int):
     '''
@@ -38,7 +65,7 @@ def get_freq_powers(spectrum: np.ndarray, num_groups: int):
     :param num_groups: Desired number of groups
     :return:
     '''
-    group_sample_size = int(spectrum.shape[0] // num_groups)
+    group_sample_size = int(len(spectrum.shape) // num_groups)
     groups = np.zeros((num_groups))
     for i in range(0, num_groups):
         groups[i] = np.sum(spectrum[i:i+group_sample_size])
@@ -54,10 +81,10 @@ def get_freq_powers(spectrum: np.ndarray, num_groups: int):
 
 default_range_cutoffs = (0.15, 0.25, 0.45, 0.65, .85, 1.0)
 default_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
-                      (0, 0, 1),
+                      (1, 0, 0),
                       (0, 1, 0),
                       (1, 1, 0),
-                      (1, 0, 0),
+                      (0, 1, 1),
                       (1, 1, 1))
 
 def map_normalized_value_to_color(normalized_value: float, colormap_index: int, color_map: list[tuple[float]] | None = None):
@@ -75,9 +102,9 @@ def map_normalized_value_to_color(normalized_value: float, colormap_index: int, 
         raise ValueError("Number of range_cutoffs and number of color_map entries must match.")
 
     #Return a tuple for the normalized value, multiply each entry in the tuple by the color map
-    return (normalized_value * color_map[colormap_index][0] * 255,
-           normalized_value * color_map[colormap_index][1] * 255,
-           normalized_value * color_map[colormap_index][2] * 255)
+    return (normalized_value * color_map[colormap_index][0],
+           normalized_value * color_map[colormap_index][1],
+           normalized_value * color_map[colormap_index][2])
 
     raise ValueError("Value outside of color map range")
 
@@ -134,8 +161,11 @@ def map_float_color_to_neopixel_color(input: tuple[float], scalar: float | None 
     :param scalar: Optional, if included scales (multiplies) the color by the specified amount
     :return:
     '''
-    scalar = 1 if scalar is None else scalar
+    scalar = 1.0 if scalar is None else scalar
 
-    return (int(input[0] * 255 * scalar),
-            int(input[1] * 255 * scalar),
-            int(input[2] * 255 * scalar))
+    c =    int(input[0] * 255.0 * scalar), \
+           int(input[1] * 255.0 * scalar), \
+           int(input[2] * 255.0 * scalar)
+
+    #print(f'{input} * {scalar} * 255 = {c}')
+    return c
