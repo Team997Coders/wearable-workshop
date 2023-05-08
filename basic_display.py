@@ -39,13 +39,14 @@ class BasicDisplay(IDisplay):
                                                self._log_range_indicies,
                                                out=self._group_power)
 
-        for i in range(self.num_cutoff_groups, len(group_power)):
+        for i in range(self.num_cutoff_groups, len(self._group_power)):
             min_val = self.last_min_group_power[i]  # Use the last min/max value before updating them
             max_val = self.last_max_group_power[i]
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, group_power[i])
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, group_power[i])
-            i_range, norm_value = map_power_to_range(group_power[i], min_val, max_val)
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, self._group_power[i])
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, self._group_power[i])
+            i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val)
             if i_range is None:
+                self.pixels[i - self.num_cutoff_groups] = (0, 0, 0)
                 continue
 
             neo_color = map_normalized_value_to_color(normalized_value=norm_value, colormap_index=i_range,
