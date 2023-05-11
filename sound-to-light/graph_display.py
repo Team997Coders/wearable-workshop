@@ -59,6 +59,9 @@ class GraphDisplay(IDisplay):
             self._log_range_indicies = float_to_indicies(range)
             #print(f"Log range: {self._log_range_indicies}")
 
+        std_spectrum = np.std(power_spectrum[128:])
+        #print(f'std: {std_spectrum:0.3f}')
+
         self._group_power = get_freq_powers_by_range(power_spectrum,
                                                self._log_range_indicies,
                                                out=self._group_power)
@@ -84,7 +87,7 @@ class GraphDisplay(IDisplay):
                 continue #Do not display since we don't have a range for the graph yet
 
             #if i == 6:
-                #print(f'{i_col} val: {group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
+                #print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
             norm_value = (self._group_power[i] - min_val) / (max_val - min_val)
             if norm_value < 0:
                 norm_value = 0

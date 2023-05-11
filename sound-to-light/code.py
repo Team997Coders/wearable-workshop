@@ -1,71 +1,174 @@
 # This is a sample Python script.
+import struct
 import time
-
+import asyncio
+import analogio
 import board
+import analogbufio
+import array
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 import ulab.numpy as np
-import random
+#import random
 import neopixel
 import math
+from audiocore import WaveFile
 
 import ulab.utils
+import ema
+from sound_rec import roll_buffer, prepend_buffer, record_sample_array, record_sample_numpy
+from basic_display import BasicDisplay
+from waterfall_display import WaterfallDisplay
+from graph_display import GraphDisplay
 
-SAMPLE_RATE = 44000
-SAMPLE_SIZE = 1024 #Sample size must be a power of 2
+SAMPLE_RATE = 11000
+SAMPLE_SIZE = 1 << 8  # Sample size must be a power of 2
+SAMPLE_BITE_SIZE = SAMPLE_SIZE // 4  # How much of the sample window we replace each iteration
 
-NUM_NEOS = 1
+MIC_PIN = board.A1
+#MIC_ADC = analogio.AnalogIn(MIC_PIN)
 
-pixels = neopixel.NeoPixel(board.NEOPIXEL, n=NUM_NEOS, brightness=0.2, auto_write=False)
+NUM_NEO_ROWS = 4
+NUM_NEO_COLS = 8
+NUM_NEOS = NUM_NEO_COLS * NUM_NEO_ROWS
 
-def get_sample(buffer: np.ndarray | None = None):
-    if buffer is None:
-        buffer = np.zeros((SAMPLE_SIZE))
+def ShowLightOrder(pixels: neopixel.NeoPixel, delay: float = None):
+    '''
+    Turn the pixels on in order to determine how they are numbered
+    :param pixels: Neopixel controller
+    :param delay: Delay before each pixel lights
+    '''
+    delay = 3.0 / float(NUM_NEOS) if delay is None else delay
+    for i in range(0, NUM_NEOS):
+        pixels[i] = (64, 0, 0)
+        pixels.show()
+        time.sleep(delay)
 
-    time_offset = time.monotonic() % 50
-    time_offset_squared = time_offset * time_offset
-
-    for i in range(0, buffer.shape[0]):
-        buffer[i] = math.cos(time_offset_squared * i) + math.sin(time_offset * i) #math.sin((i / SAMPLE_SIZE) * math.pi * 2) + math.cos(time_offset_squared * i)
-        #buffer[i] = 0.5
-
-    return buffer
-
-def get_freq_powers(spectrum: np.ndarray, num_groups: int):
-    group_sample_size = int(spectrum.shape[0] / num_groups)
-    groups = np.zeros((num_groups))
-    for i in range(0, num_groups):
-        offset = i * group_sample_size
-        groups[i] = np.sum(spectrum[i:i+group_sample_size])
-
-    return groups
-
-sample_buffer = None
-while True:
-    sample_buffer = get_sample(sample_buffer)
-    power_spectrum = ulab.utils.spectrogram(sample_buffer)
-
-    #Divide the power spectrum into a number of chunks according to the number of lights we have
-    group_power = get_freq_powers(power_spectrum, num_groups=3)
-    total_power = np.sum(group_power)
-
-    #pixel_values = tuple(np.ceil((group_power / total_power) * 255))
-    #print(f'len: {power_spectrum.shape} sum: {total_power} groups: {group_power} pix: {pixel_values}')
-    #pixels[0] = pixel_values
+    for i in range(NUM_NEOS - 1, -1, -1):
+        time.sleep(delay)
+        pixels[i] = (0, 0, 0)
+        pixels.show()
 
 
-    min_group_power = np.min(group_power)
-    max_group_power = np.max(group_power)
-    pixel_values = [0,0,0]
-    for i in range(0, len(group_power)):
-        if group_power[i] == min_group_power:
-            pixel_values[i] = 0
-        elif group_power[i] == max_group_power:
-            pixel_values[i] = 255
-        else:
-            pixel_values[i] = int(((group_power[i] - min_group_power) / (max_group_power - min_group_power)) * 255)
+def reversing_row_column_indexer(irow, icol) -> int:
+    '''
+    Converts a row and column index into a neopixel index,
+    each row reverses the order of the column indicies.  This is
+    because the LED matrix is laid out in line that folds back on itself
+    each row, ex:
+    9 8 7 6 5
+    0 1 2 3 4
+    :param irow:
+    :param icol:
+    :return:
+    '''
+    adjusted_icol = icol if irow % 2 == 0 else (NUM_NEO_COLS - 1) - icol
+    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
+    return (irow * NUM_NEO_COLS) + adjusted_icol
 
-    pixels[0] = pixel_values
-    print(f'len: {power_spectrum.shape} sum: {total_power} groups: {group_power} pix: {pixel_values}')
-    pixels.show()
+def flip_column_order_indexer(irow, icol) -> int:
+    '''
+    Flips the column ordering.  Useful when the left side of the display should be the right
+    :param irow:
+    :param icol:
+    :return:
+    '''
+    adjusted_icol = (NUM_NEO_COLS - 1) - icol
+    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
+    return (irow * NUM_NEO_COLS) + adjusted_icol
+
+
+# pixels = neopixel.NeoPixel(board.NEOPIXEL, n=NUM_NEOS, brightness=0.2, auto_write=False)
+pixels = neopixel.NeoPixel(board.D6, n=NUM_NEOS, brightness=0.05, auto_write=False)
+
+async def Run(play_wave: bool):
+    print(f"Hello World! Lets run main! play_wave: {play_wave}")
+    #######################################################
+    # Use reversing_row_column_indexer if your NeoPixels
+    # initialize going back and forth like mowing the lawn.
+    # Use None if your neopixel rows initalize in one
+    # direction
+    ShowLightOrder(pixels, 0.01)
+    # row_indexer=reversing_row_column_indexer
+    row_indexer = flip_column_order_indexer
+    ########################################
+
+    # Uncomment these lines to change how sound is displayed
+    #display = BasicDisplay(pixels=pixels, num_groups=pixels.n, num_cutoff_groups=0)
+    #display = WaterfallDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS,
+    #                           num_cutoff_groups=0, row_column_indexer=row_indexer)
+
+    display = GraphDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS, num_cutoff_groups=0, row_column_indexer=row_indexer)
+
+    #######################################################
+
+    max_buffer_value = (1 << 16) - 1
+    min_buffer_value = 0
+    half_buffer_value = (1 << 15) #For some reason my mic defaults to half the max when it is quiet
+
+
+
+    if play_wave:
+        print("Hello World! Lets play a WAV!")
+        with open("StreetChicken.wav", "rb") as wave_file:
+            sample_buffer = struct.unpack('H' * SAMPLE_SIZE, wave_file.read(SAMPLE_SIZE * 2))
+            while True:
+                sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
+                # print(f'rolled: {sample_buffer[0:10]}')
+                # sample_buffer = get_sample(sample_buffer)
+                new_buffer = struct.unpack('H' * SAMPLE_BITE_SIZE, wave_file.read(SAMPLE_BITE_SIZE * 2))
+                # print(f'len sb {len(sample_buffer)} len nb {len(new_buffer)}')
+                sample_buffer = np.array(prepend_buffer(new_buffer, sample_buffer))
+                # print(f'composite: {sample_buffer[SAMPLE_BITE_SIZE:]}')
+                # print(f'float array: {float_array}')
+                power_spectrum = ulab.utils.spectrogram(sample_buffer / max_buffer_value)
+
+                # print(f'len: {power_spectrum.shape} sum: {total_power} groups: {group_power} pix: {pixel_values}')
+                display.show(power_spectrum)
+                pixels.show()
+    else:
+        #print("Hello World! Lets record sound!")
+        # Read the full buffer before we start displaying
+        #sample_buffer, sample_buffer_min, sample_buffer_max = asyncio.run(record_sample(MIC_ADC, SAMPLE_BITE_SIZE, sample_rate=SAMPLE_RATE, buffer=None))
+        new_buffer = None
+        mic_buffer = array.array("H", [0x0000] * SAMPLE_SIZE)
+        mic_adc_bufferio = analogbufio.BufferedIn(MIC_PIN, sample_rate=SAMPLE_RATE)
+        mic_buffer = asyncio.run(record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, SAMPLE_RATE, mic_buffer))
+        sample_buffer = np.array(mic_buffer)
+
+        #initialize the min/max values
+        min_buffer_ema = ema.EMA(200, 2)
+        max_buffer_ema = ema.EMA(200, 2)
+        min_buffer_ema.add(np.min(sample_buffer))
+        max_buffer_ema.add(np.max(sample_buffer))
+        new_buffer_task = None #The async task to collect more data
+        #print(f'Got first sample: {sample_buffer}')
+        new_buffer_task = asyncio.create_task(
+            record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
+        while True:
+            mic_buffer = asyncio.run_until_complete(new_buffer_task)
+            #new_buffer_task)
+
+            new_buffer_task = asyncio.create_task(
+                record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
+            sample_buffer = np.array(mic_buffer)
+
+            min_buffer_ema.add(np.min(sample_buffer))
+            max_buffer_ema.add(np.max(sample_buffer))
+            #print(f'new: {sample_buffer[0:5]}composite: {sample_buffer[SAMPLE_BITE_SIZE:SAMPLE_BITE_SIZE+5]}')
+            #sample_buffer = prepend_buffer(new_buffer, sample_buffer)
+            buffer_range = max_buffer_ema.ema_value - min_buffer_ema.ema_value
+            float_array = ((sample_buffer - (min_buffer_ema.ema_value + (buffer_range / 2))) / buffer_range)
+            #float_array = float_array / np.max(float_array)
+            #print(f'float: {float_array[0:10]}')
+            power_spectrum = ulab.utils.spectrogram(float_array)
+            display.show(power_spectrum)
+            pixels.show()
+
+            #sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
+
+
+            # time.sleep(0.5)
+
+asyncio.run(Run(False))
