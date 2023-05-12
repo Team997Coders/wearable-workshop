@@ -2,7 +2,6 @@
 import struct
 import time
 import asyncio
-import analogio
 import board
 import analogbufio
 import array
@@ -22,7 +21,8 @@ from basic_display import BasicDisplay
 from waterfall_display import WaterfallDisplay
 from graph_display import GraphDisplay
 
-SAMPLE_RATE = 11000
+FREQUENCY_CUTOFF = 8000 # How fast we sample the signal in Hz (waves per second)
+SAMPLE_RATE = int(FREQUENCY_CUTOFF * 2.2)
 SAMPLE_SIZE = 1 << 8  # Sample size must be a power of 2
 SAMPLE_BITE_SIZE = SAMPLE_SIZE // 4  # How much of the sample window we replace each iteration
 
@@ -96,9 +96,7 @@ async def Run(play_wave: bool):
 
     # Uncomment these lines to change how sound is displayed
     #display = BasicDisplay(pixels=pixels, num_groups=pixels.n, num_cutoff_groups=0)
-    #display = WaterfallDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS,
-    #                           num_cutoff_groups=0, row_column_indexer=row_indexer)
-
+    #display = WaterfallDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS, num_cutoff_groups=0, row_column_indexer=row_indexer)
     display = GraphDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS, num_cutoff_groups=0, row_column_indexer=row_indexer)
 
     #######################################################
@@ -106,8 +104,6 @@ async def Run(play_wave: bool):
     max_buffer_value = (1 << 16) - 1
     min_buffer_value = 0
     half_buffer_value = (1 << 15) #For some reason my mic defaults to half the max when it is quiet
-
-
 
     if play_wave:
         print("Hello World! Lets play a WAV!")
@@ -138,8 +134,14 @@ async def Run(play_wave: bool):
         sample_buffer = np.array(mic_buffer)
 
         #initialize the min/max values
-        min_buffer_ema = ema.EMA(200, 2)
-        max_buffer_ema = ema.EMA(200, 2)
+        #These values are used to normalize the recorded signal.  An exponential moving average is used to slowly
+        #adjust the volume range that the microphone is focusing on.  A large number of samples means the range
+        #adjusts slowly to changes in room sound.  Smaller values may adjust the range based on quiet stretces of
+        #music or conversations and then saturate the diaplay when the volume increases.
+        #smooth factor determines how much weight is given to the more recent records.  Use a
+        min_buffer_ema = ema.EMA(num_samples=300, smooth=1.5)
+        max_buffer_ema = ema.EMA(num_samples=300, smooth=1.5)
+
         min_buffer_ema.add(np.min(sample_buffer))
         max_buffer_ema.add(np.max(sample_buffer))
         new_buffer_task = None #The async task to collect more data
@@ -147,8 +149,8 @@ async def Run(play_wave: bool):
         new_buffer_task = asyncio.create_task(
             record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
         while True:
+            #Start a task to collect the audio sample.
             mic_buffer = asyncio.run_until_complete(new_buffer_task)
-            #new_buffer_task)
 
             new_buffer_task = asyncio.create_task(
                 record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
@@ -159,6 +161,7 @@ async def Run(play_wave: bool):
             #print(f'new: {sample_buffer[0:5]}composite: {sample_buffer[SAMPLE_BITE_SIZE:SAMPLE_BITE_SIZE+5]}')
             #sample_buffer = prepend_buffer(new_buffer, sample_buffer)
             buffer_range = max_buffer_ema.ema_value - min_buffer_ema.ema_value
+            #centering_adjustment = min_buffer_ema.ema_value - (buffer_range / 2)
             float_array = ((sample_buffer - (min_buffer_ema.ema_value + (buffer_range / 2))) / buffer_range)
             #float_array = float_array / np.max(float_array)
             #print(f'float: {float_array[0:10]}')
