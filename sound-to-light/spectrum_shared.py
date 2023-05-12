@@ -2,6 +2,20 @@ import ulab.numpy as np
 import math
 
 
+def clip(value: float, min_val: float = 0, max_val: float = 1.0) -> float:
+    '''
+    Returns the value, or min/max if value falls outside the provided range
+    :param value:
+    :param min_val:
+    :param max_val:
+    :return:
+    '''
+    if value < min_val:
+        return min_val
+    if value > max_val:
+        return max_val
+    return value
+
 def log_range(num_measurements: list[float], num_groups: int):
     '''Given a number of measurements and the desired grouping,
     returns the cutoff values to create bins evenly spaced in logarithmic space.
@@ -79,7 +93,7 @@ def get_freq_powers(spectrum: np.ndarray, num_groups: int):
 #               (0, 0, 1),
 #               (1, 1, 1)]
 
-default_range_cutoffs = (0.15, 0.25, 0.45, 0.65, .85, 1.0)
+default_range_cutoffs = (0.10, 0.25, 0.45, 0.65, .85, 1.0)
 default_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
                       (1, 0, 0),
                       (0, 1, 0),
