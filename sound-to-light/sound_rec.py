@@ -30,8 +30,8 @@ async def record_sample_numpy(adc: analogio.AnalogIn, sample_size: int, sample_r
     if buffer is None:
         buffer = np.zeros((sample_size))
 
-    min_val = 0
-    max_val = 1 << 16
+    min_val = 1 << 16
+    max_val = 0
 
     for i in range(0, sample_size-1):
         #print(f'{i}')
