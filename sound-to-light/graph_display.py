@@ -5,7 +5,7 @@ import ema
 from interfaces import IDisplay
 import ulab.numpy as np
 from spectrum_shared import map_power_to_range, map_normalized_value_to_color, \
-    map_float_color_to_neopixel_color, get_log_freq_powers, log_range, float_to_indicies, get_freq_powers_by_range
+    map_float_color_to_neopixel_color, get_log_freq_powers, log_range, float_to_indicies, get_freq_powers_by_range, clip
 
 
 class GraphDisplay(IDisplay):
@@ -75,25 +75,21 @@ class GraphDisplay(IDisplay):
             i = i_col
 
             min_val = self.last_min_group_power[i] * 1.05 #Use the last min/max value before updating them
-            max_val = self.last_max_group_power[i] * .95
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, self._group_power[i]) #Slowly decay min/max
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .999, self._group_power[i])
-
-            #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
-            #self.last_min_group_power[i].add(min_val)
-            #self.last_max_group_power[i].add(max_val)
+            max_val = self.last_max_group_power[i] * 0.95
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, self._group_power[i]) #Slowly decay min/max
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, self._group_power[i])
 
             if min_val == max_val:
                 continue #Do not display since we don't have a range for the graph yet
 
+            #The second-to-last column of lights is not to be trusted.  It must be watched.
             #if i == 6:
                 #print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
-            norm_value = (self._group_power[i] - min_val) / (max_val - min_val)
-            if norm_value < 0:
-                norm_value = 0
-            elif norm_value > 1.0:
-                norm_value = 1.0
 
+            norm_value = (self._group_power[i] - min_val) / (max_val - min_val)
+            norm_value = clip(norm_value)
+
+            #Tuning the line below can change how tall columns of lights appear.
             num_leds = int(math.ceil(self.num_rows * norm_value))
             if num_leds > self.num_rows:
                 num_leds = self.num_rows

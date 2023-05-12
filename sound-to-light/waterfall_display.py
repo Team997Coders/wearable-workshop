@@ -5,6 +5,14 @@ from spectrum_shared import map_float_color_to_neopixel_color, get_log_freq_powe
     map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range
 
 
+waterfall_range_cutoffs = (0.3, 0.6, 0.7, 0.8, .9, 1.0)
+waterfall_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
+                      (1, 0, 0),
+                      (0, 1, 0),
+                      (1, 1, 0),
+                      (0, 1, 1),
+                      (1, 1, 1))
+
 class WaterfallDisplay(IDisplay):
     pixels: neopixel.NeoPixel
     num_rows: int
@@ -43,6 +51,12 @@ class WaterfallDisplay(IDisplay):
         self._log_range_indicies = None
         self._group_power = None
 
+    def move_display_up_one_row(self):
+        for i_row in range(self.num_rows-2, -1, -1):
+            for i_col in range(0, self.num_cols):
+                i_source = self.pixel_indexer(i_row, i_col)
+                i_target = self.pixel_indexer(i_row+1, i_col)
+                self.pixels[i_target] = self.pixels[i_source]
 
     def show(self, power_spectrum: np.array):
         if self._log_range_indicies is None:
@@ -53,34 +67,24 @@ class WaterfallDisplay(IDisplay):
                                                self._log_range_indicies,
                                                out=self._group_power)
 
-        #group_power = get_log_freq_powers(power_spectrum, num_groups=self.num_total_groups)
-
         #First, take all old pixel values, and move them up one row, except for the last row, which steps off the display
-        for i_row in range(self.num_rows-2, -1, -1):
-            #print(f'i_row: {i_row}')
-            for i_col in range(0, self.num_cols):
-
-                i_source = self.pixel_indexer(i_row, i_col)
-                i_target = self.pixel_indexer(i_row+1, i_col)
-                #print(f'  {i_col} t: {i_target} s: {i_source}')
-                self.pixels[i_target] = self.pixels[i_source]
-
+        self.move_display_up_one_row()
 
         #next, write the new row of columns on the bottom row
         #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
         for i in range(self.num_cutoff_groups, len(self._group_power)):
             #print(f'i: {i}')
             i_pixel = self.pixel_indexer(0, i)
-            min_val = self.last_min_group_power[i] #* 1.05  # Use the last min/max value before updating them
-            max_val = self.last_max_group_power[i] #* .95
+            min_val = self.last_min_group_power[i] * 1.05  # Use the last min/max value before updating them
+            max_val = self.last_max_group_power[i] * .95
             self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, self._group_power[i])
             self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.999, self._group_power[i])
             #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
-            i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val)
+            i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val, range_cutoffs=waterfall_range_cutoffs)
             if i_range is None:
                 self.pixels[i_pixel] = (0, 0, 0)
             else:
-                neo_color = map_normalized_value_to_color(normalized_value=norm_value, colormap_index=i_range, color_map=None)
+                neo_color = map_normalized_value_to_color(normalized_value=norm_value, colormap_index=i_range, color_map=waterfall_base_color)
 
                 #print(f'i: {i_pixel} val: {group_power[i]:0.3f} norm: {norm_value:0.3f}')
                 self.pixels[i_pixel] = map_float_color_to_neopixel_color(neo_color, norm_value)
