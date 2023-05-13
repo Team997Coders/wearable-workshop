@@ -33,6 +33,11 @@ NUM_NEO_ROWS = 4
 NUM_NEO_COLS = 8
 NUM_NEOS = NUM_NEO_COLS * NUM_NEO_ROWS
 
+
+# pixels = neopixel.NeoPixel(board.NEOPIXEL, n=NUM_NEOS, brightness=0.2, auto_write=False)
+pixels = neopixel.NeoPixel(board.D6, n=NUM_NEOS, brightness=0.05, auto_write=False)
+
+
 def ShowLightOrder(pixels: neopixel.NeoPixel, delay: float = None):
     '''
     Turn the pixels on in order to determine how they are numbered
@@ -78,9 +83,6 @@ def flip_column_order_indexer(irow, icol) -> int:
     # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
     return (irow * NUM_NEO_COLS) + adjusted_icol
 
-
-# pixels = neopixel.NeoPixel(board.NEOPIXEL, n=NUM_NEOS, brightness=0.2, auto_write=False)
-pixels = neopixel.NeoPixel(board.D6, n=NUM_NEOS, brightness=0.05, auto_write=False)
 
 async def Run(play_wave: bool):
     print(f"Hello World! Lets run main! play_wave: {play_wave}")
@@ -156,13 +158,17 @@ async def Run(play_wave: bool):
                 record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
             sample_buffer = np.array(mic_buffer)
 
+            buffer_min = np.min(sample_buffer)
+            buffer_max = np.max(sample_buffer)
             min_buffer_ema.add(np.min(sample_buffer))
             max_buffer_ema.add(np.max(sample_buffer))
             #print(f'new: {sample_buffer[0:5]}composite: {sample_buffer[SAMPLE_BITE_SIZE:SAMPLE_BITE_SIZE+5]}')
             #sample_buffer = prepend_buffer(new_buffer, sample_buffer)
-            buffer_range = max_buffer_ema.ema_value - min_buffer_ema.ema_value
-            #centering_adjustment = min_buffer_ema.ema_value - (buffer_range / 2)
-            float_array = ((sample_buffer - (min_buffer_ema.ema_value + (buffer_range / 2))) / buffer_range)
+            #buffer_range = max_buffer_ema.ema_value - min_buffer_ema.ema_value
+            buffer_range = buffer_max - buffer_min
+            centering_adjustment = buffer_min + (buffer_range // 2)
+            #print(f'max {buffer_max} min {buffer_min} range {buffer_range} centering_adjustment {centering_adjustment}')
+            float_array = sample_buffer - centering_adjustment
             #float_array = float_array / np.max(float_array)
             #print(f'float: {float_array[0:10]}')
             power_spectrum = ulab.utils.spectrogram(float_array)
