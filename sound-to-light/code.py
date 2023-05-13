@@ -22,7 +22,7 @@ from graph_display import GraphDisplay
 
 FREQUENCY_CUTOFF = 8000 # How fast we sample the signal in Hz (waves per second)
 SAMPLE_RATE = int(FREQUENCY_CUTOFF * 2.2)
-SAMPLE_SIZE = 1 << 8  # Sample size must be a power of 2
+SAMPLE_SIZE = 1 << 9  # Sample size must be a power of 2
 SAMPLE_BITE_SIZE = SAMPLE_SIZE // 4  # How much of the sample window we replace each iteration
 
 MIC_PIN = board.A1
@@ -212,7 +212,7 @@ async def Run(play_wave: bool):
             #float_array = float_array / np.max(float_array)
             #print(f'float: {float_array[0:10]}')
             power_spectrum = ulab.utils.spectrogram(float_array)
-            power_spectrum = power_spectrum[len(power_spectrum) // 2:]
+            power_spectrum = power_spectrum[0:len(power_spectrum) // 2] # The array is mirrored, so only use half
             display.show(power_spectrum)
             pixels.show()
 
