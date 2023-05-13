@@ -50,13 +50,33 @@ class WaterfallDisplay(IDisplay):
         self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
         self._log_range_indicies = None
         self._group_power = None
+        self.move_up_one_row_map = self.build_move_pixel_map()
 
     def move_display_up_one_row(self):
         for i_row in range(self.num_rows-2, -1, -1):
+            col_map = self.move_up_one_row_map[i_row]
+            for i_col in range(0, self.num_cols):
+                i_source, i_target = col_map[i_col]
+                self.pixels[i_target] = self.pixels[i_source]
+
+                #i_source = self.pixel_indexer(i_row, i_col)
+                #i_target = self.pixel_indexer(i_row+1, i_col)
+                #self.pixels[i_target] = self.pixels[i_source]
+
+    def build_move_pixel_map(self):
+        '''
+        Create a map to move each pixel up one row.  This is considerably faster than calling a function
+        for each pixel
+        '''
+        row_map = []
+        for i_row in range(0, self.num_rows-1):
+            col_map = []
             for i_col in range(0, self.num_cols):
                 i_source = self.pixel_indexer(i_row, i_col)
                 i_target = self.pixel_indexer(i_row+1, i_col)
-                self.pixels[i_target] = self.pixels[i_source]
+                col_map.append((i_source, i_target))
+            row_map.append(tuple(col_map))
+        return tuple(row_map)
 
     def show(self, power_spectrum: np.array):
         if self._log_range_indicies is None:
