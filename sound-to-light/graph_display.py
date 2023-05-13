@@ -4,8 +4,8 @@ import neopixel
 import ema
 from interfaces import IDisplay
 import ulab.numpy as np
-from spectrum_shared import map_power_to_range, map_normalized_value_to_color, \
-    map_float_color_to_neopixel_color, get_log_freq_powers, log_range, float_to_indicies, get_freq_powers_by_range, clip
+from spectrum_shared import map_power_to_range, map_normalized_value_to_color, linear_range,\
+    map_float_color_to_neopixel_color, log_range, float_to_indicies, get_freq_powers_by_range, clip
 
 
 class GraphDisplay(IDisplay):
@@ -14,7 +14,7 @@ class GraphDisplay(IDisplay):
     num_cols: int
     pixel_indexer: Any # typing.Callable[[int, int], int]
     pixel_values: list[list[tuple[int, int, int]]] #Stores the values
-    _log_range_indicies: np.array[int]
+    _range_indicies: np.array[int]
     _group_power: np.array[float]
 
     def default_row_column_indexer(self, irow, icol) -> int:
@@ -50,29 +50,32 @@ class GraphDisplay(IDisplay):
         #     self.max_group_power_ema.append(ema.EMA(500, 2))
 
         self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
-        self._log_range_indicies = None
+        self._range_indicies = None
         self._group_power = None
 
     def show(self, power_spectrum: np.array):
-        if self._log_range_indicies is None:
-            range = log_range(len(power_spectrum), self.num_total_groups)
-            self._log_range_indicies = float_to_indicies(range)
+        if self._range_indicies is None:
+            #range = log_range(len(power_spectrum), self.num_total_groups)
+            range = linear_range(len(power_spectrum), self.num_total_groups)
+            self._range_indicies = float_to_indicies(range)
             #print(f"Log range: {self._log_range_indicies}")
 
         std_spectrum = np.std(power_spectrum[128:])
         #print(f'std: {std_spectrum:0.3f}')
 
         self._group_power = get_freq_powers_by_range(power_spectrum,
-                                               self._log_range_indicies,
-                                               out=self._group_power)
+                                                     self._range_indicies,
+                                                     out=self._group_power)
 
         #group_power = get_log_freq_powers(power_spectrum, num_groups=self.num_total_groups)
 
         #next, write the new row of columns on the bottom row
+        #print(f"{self._group_power}")
         #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
         #print(f'Min: {self.last_min_group_power} Max: {self.last_max_group_power}')
         for i_col in range(self.num_cutoff_groups, len(self._group_power)):
             i = i_col
+            #print(f"iCol: {i} Power: {self._group_power[i]}")
 
             min_val = self.last_min_group_power[i] * 1.05 #Use the last min/max value before updating them
             max_val = self.last_max_group_power[i] * 0.95
@@ -84,7 +87,7 @@ class GraphDisplay(IDisplay):
 
             #The second-to-last column of lights is not to be trusted.  It must be watched.
             #if i == 6:
-                #print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
+            #    print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
 
             norm_value = (self._group_power[i] - min_val) / (max_val - min_val)
             norm_value = clip(norm_value)

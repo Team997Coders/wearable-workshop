@@ -11,7 +11,6 @@ import array
 import ulab.numpy as np
 #import random
 import neopixel
-import math
 from audiocore import WaveFile
 
 import ulab.utils
@@ -55,6 +54,20 @@ def ShowLightOrder(pixels: neopixel.NeoPixel, delay: float = None):
         pixels[i] = (0, 0, 0)
         pixels.show()
 
+def ShowColumnOrder(pixels: neopixel.NeoPixel, indexer, delay: float = None):
+    '''
+    Turn the pixels on in order to determine how they are numbered
+    :param pixels: Neopixel controller
+    :param delay: Delay before each pixel lights
+    '''
+    delay = 3.0 / float(NUM_NEOS) if delay is None else delay
+    for icol in range(0, NUM_NEO_COLS):
+        for irow in range(0, NUM_NEO_ROWS):
+            i = indexer(irow, icol)
+            pixels[i] = (64, 0, 0)
+            pixels.show()
+            time.sleep(delay)
+
 
 def reversing_row_column_indexer(irow, icol) -> int:
     '''
@@ -74,6 +87,7 @@ def reversing_row_column_indexer(irow, icol) -> int:
 
 def flip_column_order_indexer(irow, icol) -> int:
     '''
+    Used for NeoPixel Featherwing
     Flips the column ordering.  Useful when the left side of the display should be the right
     :param irow:
     :param icol:
@@ -83,6 +97,32 @@ def flip_column_order_indexer(irow, icol) -> int:
     # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
     return (irow * NUM_NEO_COLS) + adjusted_icol
 
+def standard_indexer(irow, icol) -> int:
+    '''
+    Flips the column ordering.  Useful when the left side of the display should be the right
+    :param irow:
+    :param icol:
+    :return:
+    '''
+    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
+    return (irow * NUM_NEO_COLS) + icol
+
+def rows_are_columns_with_alternating_column_order_indexer(irow: int, icol: int) -> int:
+    '''
+    Flips the column ordering.  Useful when the left side of the display should be the right
+    :param irow:
+    :param icol:
+    :return:
+    '''
+    assert(isinstance(irow, int))
+    assert(isinstance(icol, int))
+    #adjusted_icol = (NUM_NEO_COLS - 1) - icol
+    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
+    adjusted_irow = irow if icol % 2 == 0 else (NUM_NEO_ROWS - 1) - irow
+    i = (icol * NUM_NEO_ROWS) + adjusted_irow
+    #print(f'{irow}, {icol}, adjusted {adjusted_irow} -> {i}')
+    return i
+
 
 async def Run(play_wave: bool):
     print(f"Hello World! Lets run main! play_wave: {play_wave}")
@@ -91,7 +131,7 @@ async def Run(play_wave: bool):
     # initialize going back and forth like mowing the lawn.
     # Use None if your neopixel rows initalize in one
     # direction
-    ShowLightOrder(pixels, 0.01)
+    #ShowLightOrder(pixels, 0.01)
     # row_indexer=reversing_row_column_indexer
     row_indexer = flip_column_order_indexer
     ########################################
@@ -172,6 +212,7 @@ async def Run(play_wave: bool):
             #float_array = float_array / np.max(float_array)
             #print(f'float: {float_array[0:10]}')
             power_spectrum = ulab.utils.spectrogram(float_array)
+            power_spectrum = power_spectrum[len(power_spectrum) // 2:]
             display.show(power_spectrum)
             pixels.show()
 
