@@ -1,7 +1,7 @@
 import math
 import ulab.numpy as np
 import neopixel
-from spectrum_shared import get_freq_powers, map_power_to_color, map_float_color_to_neopixel_color, get_log_freq_powers, \
+from spectrum_shared import map_power_to_color, map_float_color_to_neopixel_color, \
     map_power_to_range, map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range
 from interfaces import IDisplay
 

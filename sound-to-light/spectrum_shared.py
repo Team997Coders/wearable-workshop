@@ -16,7 +16,7 @@ def clip(value: float, min_val: float = 0, max_val: float = 1.0) -> float:
         return max_val
     return value
 
-def log_range(num_measurements: list[float], num_groups: int):
+def log_range(num_measurements: int, num_groups: int):
     '''Given a number of measurements and the desired grouping,
     returns the cutoff values to create bins evenly spaced in logarithmic space.
     '''
@@ -26,6 +26,18 @@ def log_range(num_measurements: list[float], num_groups: int):
     log_bin_cutoffs = log_bin_cutoffs * log_bin_spacing
     log_bin_cutoffs = np.exp(log_bin_cutoffs)
     return log_bin_cutoffs
+
+def linear_range(num_measurements: int, num_groups: int):
+    '''Given a number of measurements and the desired grouping,
+    returns the cutoff values to create bins evenly spaced in normal space.
+    '''
+    bin_spacing = num_measurements / num_groups
+    bin_cutoffs = np.arange(0, num_groups+1) * bin_spacing
+    bin_cutoffs[0] = 1  #Remove the first group, it isn't interesting
+    #print(f"{bin_cutoffs[0:3]} {bin_cutoffs[-1]} len: {len(bin_cutoffs)}" )
+    if num_groups + 1 != len(bin_cutoffs):
+        raise ValueError("num_groups and len(bin_cutoffs) must match")
+    return bin_cutoffs
 
 
 def float_to_indicies(input: np.array):
@@ -52,39 +64,10 @@ def get_freq_powers_by_range(spectrum: np.ndarray, range_cutoffs: np.ndarray[int
         #     max_s = np.max(s)
         #     imax = np.argmax(s)
         #     print(f'i_max: {imax} r: {range_cutoffs[i]}:{range_cutoffs[i+1]} min: {min_s:0.2f} max: {max_s:0.2f} sum: {out[i]:0.2f} s: {spectrum[int(range_cutoffs[i]):int(range_cutoffs[i + 1])]}')
-        # # print(f"log cutoffs: {int(lr[i])}:{int(lr[i+1])} {spectrum[int(lr[i]):int(lr[i+1])]}")
+        #print(f"range cutoffs: {int(range_cutoffs[i])}:{int(range_cutoffs[i+1])} {spectrum[int(range_cutoffs[i]):int(range_cutoffs[i+1])]}")
 
     return out
 
-
-def get_log_freq_powers(spectrum: np.ndarray, num_groups: int):
-    '''
-    Divided a spectrum into num_groups evenly spaced on the log axis
-    :param spectrum: Frequency spectrum
-    :param num_groups: Desired number of groups
-    :return:
-    '''
-    lr = log_range(len(spectrum), num_groups)
-    #print(f"log: {lr} spec: {spectrum}")
-    lr = np.ceil(lr) #Round cutoffs to nearest integer so we can use them as indicies
-    lr = np.array(lr, dtype=np.uint16)
-    #print(f'{lr}')
-    return get_freq_powers_by_range(spectrum, lr)
-
-
-def get_freq_powers(spectrum: np.ndarray, num_groups: int):
-    '''
-    Divided a spectrum into num_groups
-    :param spectrum: Frequency spectrum
-    :param num_groups: Desired number of groups
-    :return:
-    '''
-    group_sample_size = int(len(spectrum.shape) // num_groups)
-    groups = np.zeros((num_groups))
-    for i in range(0, num_groups):
-        groups[i] = np.sum(spectrum[i:i+group_sample_size])
-
-    return groups
 
 # default_range_cutoffs = [0.15, 0.35, 0.65, 0.85, 1.0]
 # default_base_color = [(0, 0, 0), #Red, Green, Blue weights for each range
