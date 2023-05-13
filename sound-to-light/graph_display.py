@@ -4,6 +4,7 @@ import neopixel
 import ema
 from interfaces import IDisplay
 import ulab.numpy as np
+from display_settings import DisplaySettings
 from spectrum_shared import map_power_to_range, map_normalized_value_to_color, linear_range,\
     map_float_color_to_neopixel_color, log_range, float_to_indicies, get_freq_powers_by_range, clip
 
@@ -16,15 +17,7 @@ class GraphDisplay(IDisplay):
     pixel_values: list[list[tuple[int, int, int]]] #Stores the values
     _range_indicies: np.array[int]
     _group_power: np.array[float]
-
-    def default_row_column_indexer(self, irow, icol) -> int:
-        '''
-        Converts a row and column index into a neopixel index
-        :param irow:
-        :param icol:
-        :return:
-        '''
-        return (irow * self.num_cols) + icol
+    settings: DisplaySettings
 
     @property
     def num_visible_groups(self) -> int:
@@ -34,11 +27,12 @@ class GraphDisplay(IDisplay):
     def num_total_groups(self) -> int:
         return self.num_visible_groups + self.num_cutoff_groups
 
-    def __init__(self, pixels: neopixel.NeoPixel, num_rows: int, num_cols: int, num_cutoff_groups: int,
-                 row_column_indexer: Callable[[int, int], int] | None = None):
+    def __init__(self, pixels: neopixel.NeoPixel, settings: DisplaySettings, num_cutoff_groups: int):
         self.pixels = pixels
-        self.num_rows = num_rows
-        self.num_cols = num_cols
+        self.settings = settings
+        self.num_rows = settings.num_rows
+        self.num_cols = settings.num_cols
+        self.pixel_indexer = settings.indexer
         self.num_cutoff_groups = num_cutoff_groups
         self.last_max_group_power = [0] * self.num_cols
         self.last_min_group_power = [1 << 16] * self.num_cols
@@ -49,9 +43,25 @@ class GraphDisplay(IDisplay):
         #     self.min_group_power_ema.append(ema.EMA(500, 2))
         #     self.max_group_power_ema.append(ema.EMA(500, 2))
 
-        self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
+        #self.pixel_indexer = self.default_row_column_indexer if row_column_indexer is None else row_column_indexer
         self._range_indicies = None
         self._group_power = None
+        self.pixel_map = self.build_pixel_map()
+
+    def build_pixel_map(self):
+        '''
+        Create a map to move each pixel up one row.  This is considerably faster than calling a function
+        for each pixel
+        '''
+        col_map = []
+        for i_col in range(0, self.num_cols):
+            row_map = []
+            for i_row in range(0, self.num_rows):
+                i_target = self.pixel_indexer(i_row, i_col, self.settings)
+                row_map.append(i_target)
+            col_map.append(tuple(row_map))
+
+        return tuple(col_map)
 
     def show(self, power_spectrum: np.array):
         if self._range_indicies is None:
@@ -76,7 +86,7 @@ class GraphDisplay(IDisplay):
         for i_col in range(self.num_cutoff_groups, len(self._group_power)):
             i = i_col
             while self._range_indicies[i] == self._range_indicies[i+1]:
-                i -= 1  #Duplicate the previous columns output
+                i += 1  #Duplicate the previous columns output
 
             #print(f"iCol: {i} Power: {self._group_power[i]}")
 
@@ -87,7 +97,7 @@ class GraphDisplay(IDisplay):
 
             if min_val == max_val:
                 continue #Do not display since we don't have a range for the graph yet
- 
+
             #The second-to-last column of lights is not to be trusted.  It must be watched.
             #if i == 6:
             #    print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
@@ -103,8 +113,10 @@ class GraphDisplay(IDisplay):
             i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val)
             neo_color = map_normalized_value_to_color(normalized_value=norm_value, colormap_index=i_range, color_map=None)
             #print(f'{i_range} {norm_value} color: {neo_color}')
+            col_map = self.pixel_map[i_col]
             for i_row in range(0, num_leds):
-                i_pixel = self.pixel_indexer(i_row, i_col)
+                i_pixel = col_map[i_row]
+                #i_pixel = self.pixel_indexer(i_row, i_col)
                 if i_row == num_leds - 1: #Dim the highest point of the bar graph according to normalized value to simulate extra range
                     self.pixels[i_pixel] = map_float_color_to_neopixel_color(neo_color, norm_value)
                 else:
@@ -113,6 +125,9 @@ class GraphDisplay(IDisplay):
                 #print(f'{i_col},{i_row}: num_leds {num_leds} norm_val: {norm_value} neo_color: {neo_color} pix: {self.pixels[i_pixel]}')
 
             for i_row in range(num_leds, self.num_rows):
-                i_pixel = self.pixel_indexer(i_row, i_col)
+                i_pixel = col_map[i_row]
+                #i_pixel = self.pixel_indexer(i_row, i_col)
                 #print(f'col: clear {i_col} row: {i_row} i_pix: {i_pixel} num_leds: {num_leds}')
                 self.pixels[i_pixel] = (0, 0, 0)
+
+        self.pixels.show()

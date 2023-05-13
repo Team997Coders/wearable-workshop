@@ -1,4 +1,5 @@
 # This is a sample Python script.
+
 import struct
 import time
 import asyncio
@@ -19,110 +20,76 @@ from sound_rec import roll_buffer, prepend_buffer, record_sample_array, record_s
 from basic_display import BasicDisplay
 from waterfall_display import WaterfallDisplay
 from graph_display import GraphDisplay
+from display_settings import DisplaySettings
+from pixel_indexers import *
 
-FREQUENCY_CUTOFF = 8000 # How fast we sample the signal in Hz (waves per second)
-SAMPLE_RATE = int(FREQUENCY_CUTOFF * 2.2)
+
+display_configs = {
+    "32x8 Waterfall": DisplaySettings(32, 8, columns_are_rows_with_alternating_column_order_indexer),
+    "8x32 Graph": DisplaySettings(8, 32, rows_are_columns_with_alternating_column_order_indexer),
+    "8x4 Neopixel Feather Graph": DisplaySettings(4, 8, flip_column_order_indexer),
+    "8x4 Neopixel Feather Waterfall": DisplaySettings(4, 8, flip_column_order_indexer)
+}
+
+FREQUENCY_CUTOFF = 11000 # How fast we sample the signal in Hz (waves per second)
+SAMPLE_RATE = int(FREQUENCY_CUTOFF * 2.1)
 SAMPLE_SIZE = 1 << 9  # Sample size must be a power of 2
 SAMPLE_BITE_SIZE = SAMPLE_SIZE // 4  # How much of the sample window we replace each iteration
 
 MIC_PIN = board.A1
 #MIC_ADC = analogio.AnalogIn(MIC_PIN)
 
-NUM_NEO_ROWS = 4
-NUM_NEO_COLS = 8
+NUM_NEO_ROWS = 8
+NUM_NEO_COLS = 32
 NUM_NEOS = NUM_NEO_COLS * NUM_NEO_ROWS
 
-
 # pixels = neopixel.NeoPixel(board.NEOPIXEL, n=NUM_NEOS, brightness=0.2, auto_write=False)
-pixels = neopixel.NeoPixel(board.D6, n=NUM_NEOS, brightness=0.05, auto_write=False)
+pixels = neopixel.NeoPixel(board.D10, n=NUM_NEOS, brightness=0.05, auto_write=False)
+pixels_featherwing = neopixel.NeoPixel(board.D6, n=4*8, brightness=0.05, auto_write=False)
 
+displays = (
+    GraphDisplay(pixels, display_configs["8x32 Graph"], 0),
+    WaterfallDisplay(pixels, display_configs["32x8 Waterfall"], 0),
+    GraphDisplay(pixels_featherwing, display_configs["8x4 Neopixel Feather Graph"], 0),
+    WaterfallDisplay(pixels_featherwing, display_configs["8x4 Neopixel Feather Waterfall"], 0),
+)
 
-def ShowLightOrder(pixels: neopixel.NeoPixel, delay: float = None):
+def ShowLightOrder(pixels: neopixel.NeoPixel, settings: DisplaySettings, delay: float = None):
     '''
     Turn the pixels on in order to determine how they are numbered
     :param pixels: Neopixel controller
     :param delay: Delay before each pixel lights
     '''
-    delay = 3.0 / float(NUM_NEOS) if delay is None else delay
-    for i in range(0, NUM_NEOS):
+    delay = 3.0 / float(settings.num_neos) if delay is None else delay
+    for i in range(0, settings.num_neos):
         pixels[i] = (64, 0, 0)
         pixels.show()
         time.sleep(delay)
 
-    for i in range(NUM_NEOS - 1, -1, -1):
+    for i in range(settings.num_neos - 1, -1, -1):
         time.sleep(delay)
         pixels[i] = (0, 0, 0)
         pixels.show()
 
-def ShowColumnOrder(pixels: neopixel.NeoPixel, indexer, delay: float = None):
+def ShowColumnOrder(pixels: neopixel.NeoPixel, settings: DisplaySettings, delay: float = None):
     '''
-    Turn the pixels on in order to determine how they are numbered
+    Light each column from 0 to N starting lighting each row 0 to M
     :param pixels: Neopixel controller
     :param delay: Delay before each pixel lights
     '''
-    delay = 3.0 / float(NUM_NEOS) if delay is None else delay
-    for icol in range(0, NUM_NEO_COLS):
-        for irow in range(0, NUM_NEO_ROWS):
-            i = indexer(irow, icol)
+    delay = 3.0 / float(settings.num_neos) if delay is None else delay
+    for icol in range(0, settings.num_cols):
+        for irow in range(0, settings.num_rows):
+            i = settings.indexer(irow, icol, settings)
             pixels[i] = (64, 0, 0)
             pixels.show()
             time.sleep(delay)
 
-
-def reversing_row_column_indexer(irow, icol) -> int:
-    '''
-    Converts a row and column index into a neopixel index,
-    each row reverses the order of the column indicies.  This is
-    because the LED matrix is laid out in line that folds back on itself
-    each row, ex:
-    9 8 7 6 5
-    0 1 2 3 4
-    :param irow:
-    :param icol:
-    :return:
-    '''
-    adjusted_icol = icol if irow % 2 == 0 else (NUM_NEO_COLS - 1) - icol
-    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
-    return (irow * NUM_NEO_COLS) + adjusted_icol
-
-def flip_column_order_indexer(irow, icol) -> int:
-    '''
-    Used for NeoPixel Featherwing
-    Flips the column ordering.  Useful when the left side of the display should be the right
-    :param irow:
-    :param icol:
-    :return:
-    '''
-    adjusted_icol = (NUM_NEO_COLS - 1) - icol
-    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
-    return (irow * NUM_NEO_COLS) + adjusted_icol
-
-def standard_indexer(irow, icol) -> int:
-    '''
-    Flips the column ordering.  Useful when the left side of the display should be the right
-    :param irow:
-    :param icol:
-    :return:
-    '''
-    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
-    return (irow * NUM_NEO_COLS) + icol
-
-def rows_are_columns_with_alternating_column_order_indexer(irow: int, icol: int) -> int:
-    '''
-    Flips the column ordering.  Useful when the left side of the display should be the right
-    :param irow:
-    :param icol:
-    :return:
-    '''
-    assert(isinstance(irow, int))
-    assert(isinstance(icol, int))
-    #adjusted_icol = (NUM_NEO_COLS - 1) - icol
-    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
-    adjusted_irow = irow if icol % 2 == 0 else (NUM_NEO_ROWS - 1) - irow
-    i = (icol * NUM_NEO_ROWS) + adjusted_irow
-    #print(f'{irow}, {icol}, adjusted {adjusted_irow} -> {i}')
-    return i
-
+    for icol in range(0, settings.num_cols):
+        for irow in range(0, settings.num_rows):
+            i = settings.indexer(irow, icol, settings)
+            pixels[i] = (0, 0, 0)
+    pixels.show()
 
 async def Run(play_wave: bool):
     print(f"Hello World! Lets run main! play_wave: {play_wave}")
@@ -131,16 +98,15 @@ async def Run(play_wave: bool):
     # initialize going back and forth like mowing the lawn.
     # Use None if your neopixel rows initalize in one
     # direction
-    #ShowLightOrder(pixels, 0.01)
     # row_indexer=reversing_row_column_indexer
-    row_indexer = flip_column_order_indexer
+     #ShowColumnOrder(pixels, row_indexer, 0)
     ########################################
 
     # Uncomment these lines to change how sound is displayed
-    #display = BasicDisplay(pixels=pixels, num_groups=pixels.n, num_cutoff_groups=0)
-    #display = WaterfallDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS, num_cutoff_groups=0, row_column_indexer=row_indexer)
-    display = GraphDisplay(pixels=pixels, num_cols=NUM_NEO_COLS, num_rows=NUM_NEO_ROWS, num_cutoff_groups=0, row_column_indexer=row_indexer)
+    display = displays[1]
 
+    #ShowLightOrder(display.pixels, display.settings, 0.01)
+    ShowColumnOrder(display.pixels, display.settings, 0.0)
     #######################################################
 
     max_buffer_value = (1 << 16) - 1
@@ -172,8 +138,8 @@ async def Run(play_wave: bool):
         new_buffer = None
         mic_buffer = array.array("H", [0x0000] * SAMPLE_SIZE)
         mic_adc_bufferio = analogbufio.BufferedIn(MIC_PIN, sample_rate=SAMPLE_RATE)
-        mic_buffer = asyncio.run(record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, SAMPLE_RATE, mic_buffer))
-        sample_buffer = np.array(mic_buffer)
+        mic_buffer_task = asyncio.create_task(record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, SAMPLE_RATE, mic_buffer))
+        sample_buffer = np.array(await mic_buffer_task)
 
         #initialize the min/max values
         #These values are used to normalize the recorded signal.  An exponential moving average is used to slowly
@@ -192,7 +158,9 @@ async def Run(play_wave: bool):
             record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
         while True:
             #Start a task to collect the audio sample.
-            mic_buffer = asyncio.run_until_complete(new_buffer_task)
+            #mic_buffer = await asyncio.gather(new_buffer_task)
+
+            mic_buffer = await new_buffer_task
 
             new_buffer_task = asyncio.create_task(
                 record_sample_array(mic_adc_bufferio, SAMPLE_SIZE, sample_rate=SAMPLE_RATE, buffer=mic_buffer))
@@ -213,12 +181,9 @@ async def Run(play_wave: bool):
             #print(f'float: {float_array[0:10]}')
             power_spectrum = ulab.utils.spectrogram(float_array)
             power_spectrum = power_spectrum[0:len(power_spectrum) // 2] # The array is mirrored, so only use half
+            #power_spectrum = power_spectrum[len(power_spectrum) // 2:]  # The array is mirrored, so only use half
             display.show(power_spectrum)
-            pixels.show()
-
             #sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
-
-
             # time.sleep(0.5)
 
 asyncio.run(Run(False))
