@@ -55,8 +55,8 @@ class GraphDisplay(IDisplay):
 
     def show(self, power_spectrum: np.array):
         if self._range_indicies is None:
-            #range = log_range(len(power_spectrum), self.num_total_groups)
-            range = linear_range(len(power_spectrum), self.num_total_groups)
+            range = log_range(len(power_spectrum), self.num_total_groups)
+            #range = linear_range(len(power_spectrum), self.num_total_groups)
             self._range_indicies = float_to_indicies(range)
             #print(f"Log range: {self._log_range_indicies}")
 
