@@ -75,6 +75,9 @@ class GraphDisplay(IDisplay):
         #print(f'Min: {self.last_min_group_power} Max: {self.last_max_group_power}')
         for i_col in range(self.num_cutoff_groups, len(self._group_power)):
             i = i_col
+            while self._range_indicies[i] == self._range_indicies[i+1]:
+                i -= 1  #Duplicate the previous columns output
+
             #print(f"iCol: {i} Power: {self._group_power[i]}")
 
             min_val = self.last_min_group_power[i] * 1.05 #Use the last min/max value before updating them
@@ -84,7 +87,7 @@ class GraphDisplay(IDisplay):
 
             if min_val == max_val:
                 continue #Do not display since we don't have a range for the graph yet
-
+ 
             #The second-to-last column of lights is not to be trusted.  It must be watched.
             #if i == 6:
             #    print(f'{i_col} val: {self._group_power[i]} min: {self.last_min_group_power[i]} max: {self.last_max_group_power[i]}')
