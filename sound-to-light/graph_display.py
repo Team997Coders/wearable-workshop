@@ -65,28 +65,42 @@ class GraphDisplay(IDisplay):
 
     def show(self, power_spectrum: np.array):
         if self._range_indicies is None:
-            range = log_range(len(power_spectrum), self.num_total_groups)
-            #range = linear_range(len(power_spectrum), self.num_total_groups)
-            self._range_indicies = float_to_indicies(range)
-            #print(f"Log range: {self._log_range_indicies}")
+            if self.settings.log_scale:
+                range = log_range(len(power_spectrum), self.num_total_groups)
+            else:
+                range = linear_range(len(power_spectrum), self.num_total_groups)
 
-        std_spectrum = np.std(power_spectrum[128:])
+            self._range_indicies = float_to_indicies(range)
+            print(f"Range indicies: {self._range_indicies} nEntries: {len(self._range_indicies)}")
+
+        #std_spectrum = np.std(power_spectrum[128:])
         #print(f'std: {std_spectrum:0.3f}')
 
         self._group_power = get_freq_powers_by_range(power_spectrum,
                                                      self._range_indicies,
                                                      out=self._group_power)
 
+        #self._group_power = self._group_power * (self._group_power / 2.0)
+
         #group_power = get_log_freq_powers(power_spectrum, num_groups=self.num_total_groups)
 
         #next, write the new row of columns on the bottom row
-        #print(f"{self._group_power}")
-        #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
+        #print(f"group power: {self._group_power}")
+        #print(f'n_groups: {len(self._group_power)} n_cutoff: {self.num_cutoff_groups}')
         #print(f'Min: {self.last_min_group_power} Max: {self.last_max_group_power}')
         for i_col in range(self.num_cutoff_groups, len(self._group_power)):
             i = i_col
+
+            if i + 1 >= len(self._range_indicies):
+                break
+
             while self._range_indicies[i] == self._range_indicies[i+1]:
                 i += 1  #Duplicate the previous columns output
+                if i + 1 >= len(self._range_indicies):
+                    break
+
+            if i >= len(self._range_indicies) or i >= len(self._group_power):
+                break
 
             #print(f"iCol: {i} Power: {self._group_power[i]}")
 

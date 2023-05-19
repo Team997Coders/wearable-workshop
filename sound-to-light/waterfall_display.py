@@ -3,9 +3,10 @@ from interfaces import IDisplay
 import ulab.numpy as np
 from display_settings import DisplaySettings
 from spectrum_shared import map_float_color_to_neopixel_color,  map_power_to_range, \
-    map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range
+    map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range, \
+    linear_range
 
-waterfall_range_cutoffs = (0.3, 0.6, 0.7, 0.8, .9, 1.0)
+waterfall_range_cutoffs = (0.1, 0.3, 0.5, 0.7, .9, 1.0)
 waterfall_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
                       (1, 0, 0),
                       (0, 1, 0),
@@ -72,12 +73,18 @@ class WaterfallDisplay(IDisplay):
 
     def show(self, power_spectrum: np.array):
         if self._range_indicies is None:
-            range = log_range(len(power_spectrum), self.num_total_groups)
+            if self.settings.log_scale:
+                range = log_range(len(power_spectrum), self.num_total_groups)
+            else:
+                range = linear_range(len(power_spectrum), self.num_total_groups)
+
             self._range_indicies = float_to_indicies(range)
 
         self._group_power = get_freq_powers_by_range(power_spectrum,
                                                      self._range_indicies,
                                                      out=self._group_power)
+
+        self._group_power = self._group_power * self._group_power
 
         #First, take all old pixel values, and move them up one row, except for the last row, which steps off the display
         self.move_display_up_one_row()

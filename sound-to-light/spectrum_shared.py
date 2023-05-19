@@ -16,15 +16,16 @@ def clip(value: float, min_val: float = 0, max_val: float = 1.0) -> float:
         return max_val
     return value
 
-def log_range(num_measurements: int, num_groups: int):
+def log_range(num_measurements: int, num_groups: int, base: float = None):
     '''Given a number of measurements and the desired grouping,
     returns the cutoff values to create bins evenly spaced in logarithmic space.
     '''
-    log_range = math.log(num_measurements)
+    log_range = math.log(num_measurements) if base is None else math.log(num_measurements, base)
     log_bin_spacing = log_range / num_groups
     log_bin_cutoffs = np.arange(0, num_groups+1)
     log_bin_cutoffs = log_bin_cutoffs * log_bin_spacing
     log_bin_cutoffs = np.exp(log_bin_cutoffs)
+    print(f'log_bin_cutoffs: {log_bin_cutoffs}')
     return log_bin_cutoffs
 
 def linear_range(num_measurements: int, num_groups: int):

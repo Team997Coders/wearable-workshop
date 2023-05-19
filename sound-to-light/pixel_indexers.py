@@ -55,6 +55,22 @@ def rows_are_columns_with_alternating_column_order_indexer(irow: int, icol: int,
     #print(f'{irow}, {icol}, adjusted {adjusted_irow} -> {i}')
     return i
 
+def rows_are_columns_with_alternating_reversed_column_order_indexer(irow: int, icol: int, settings: DisplaySettings) -> int:
+    '''
+    Flips the column ordering.  Useful when the left side of the display should be the right
+    :param irow:
+    :param icol:
+    :return:
+    '''
+    assert(isinstance(irow, int))
+    assert(isinstance(icol, int))
+    #adjusted_icol = (settings.num_neo_cols - 1) - icol
+    # print(f'irow: {irow} icol: {icol} adjusted_icol: {adjusted_icol}')
+    adjusted_irow = irow if icol % 2 == 1 else (settings.num_neo_rows - 1) - irow
+    i = (((settings.num_cols - 1) - icol) * settings.num_neo_rows) + adjusted_irow
+    #print(f'{irow}, {icol}, adjusted {adjusted_irow} -> {i}')
+    return i
+
 def columns_are_rows_with_alternating_column_order_indexer(irow: int, icol: int, settings: DisplaySettings) -> int:
     '''
     Flips the column ordering.  Useful when the left side of the display should be the right
