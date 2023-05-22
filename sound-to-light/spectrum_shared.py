@@ -1,4 +1,9 @@
-import ulab.numpy as np
+
+try:
+    import ulab.numpy as np
+except ModuleNotFoundError:
+    import numpy as np
+
 import math
 
 
@@ -24,7 +29,7 @@ def log_range(num_measurements: int, num_groups: int, base: float = None):
     log_bin_spacing = log_range / num_groups
     log_bin_cutoffs = np.arange(0, num_groups+1)
     log_bin_cutoffs = log_bin_cutoffs * log_bin_spacing
-    log_bin_cutoffs = np.exp(log_bin_cutoffs)
+    log_bin_cutoffs = np.exp(log_bin_cutoffs) if base is None else log_bin_cutoffs ** base
     print(f'log_bin_cutoffs: {log_bin_cutoffs}')
     return log_bin_cutoffs
 
@@ -44,9 +49,24 @@ def linear_range(num_measurements: int, num_groups: int):
 def float_to_indicies(input: np.array):
     '''Convert a float array to an integer array that can be used for indexing
     '''
-    input = np.ceil(input)  # Round cutoffs to nearest integer so we can use them as indicies
+    input = np.around(input)  # Round cutoffs to nearest integer so we can use them as indicies
     return np.array(input, dtype=np.uint16)
 
+def space_indicies(input: np.array):
+    '''
+    When there are duplicates in an index array, change the values so there are no duplicates
+    :param input:
+    :return:
+    '''
+    spaced_input = np.zeros(len(input), dtype=input.dtype)
+    spaced_input[0] = input[0]
+    for i in range(1, len(input)):
+        if input[i] <= spaced_input[i - 1]:
+            spaced_input[i] = spaced_input[i-1] + 1
+        else:
+            spaced_input[i] = input[i]
+
+    return spaced_input
 
 def get_freq_powers_by_range(spectrum: np.ndarray, range_cutoffs: np.ndarray[int], out: np.ndarray[float] | None = None):
     #print(f'{range_cutoffs} out: {out}')
@@ -167,3 +187,13 @@ def map_float_color_to_neopixel_color(input: tuple[float], scalar: float | None 
 
     #print(f'{input} * {scalar} * 255 = {c}')
     return c
+
+if __name__ == '__main__':
+    freq = np.arange(0, 1000, 20)
+    print(f'num freq: {len(freq)}')
+    log_indicies = log_range(len(freq), 8, 2)
+    print(f'log indicies: {log_indicies}')
+    range_indicies = float_to_indicies(log_indicies)
+    print(f'range indicies: {range_indicies}')
+    si = space_indicies(range_indicies)
+    print(f'spaced indicies: {si}')

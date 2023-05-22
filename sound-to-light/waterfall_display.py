@@ -1,16 +1,17 @@
 import neopixel
 from interfaces import IDisplay
 import ulab.numpy as np
+import ema
 from display_settings import DisplaySettings
 from spectrum_shared import map_float_color_to_neopixel_color,  map_power_to_range, \
     map_normalized_value_to_color, log_range, float_to_indicies, get_freq_powers_by_range, \
-    linear_range
+    linear_range, space_indicies
 
-waterfall_range_cutoffs = (0.1, 0.3, 0.5, 0.7, .9, 1.0)
+waterfall_range_cutoffs = (0.20, 0.35, 0.55, 0.75, .9, 1.0)
 waterfall_base_color = ((0, 0, 0), #Red, Green, Blue weights for each range
-                      (1, 0, 0),
-                      (0, 1, 0),
-                      (1, 1, 0),
+                      (.25, 0, 0),
+                      (0, .5, 0),
+                      (.75, .75, 0),
                       (0, 1, 1),
                       (1, 1, 1))
 
@@ -44,6 +45,10 @@ class WaterfallDisplay(IDisplay):
         self._range_indicies = None
         self._group_power = None
         self.move_up_one_row_map = self.build_move_pixel_map()
+
+        self._mean_group_power_ema = []
+        for i in range(0, self.num_cols):
+            self._mean_group_power_ema.append(ema.EMA(500, 1.5))
 
     def move_display_up_one_row(self):
         for i_row in range(self.num_rows-2, -1, -1):
@@ -79,6 +84,7 @@ class WaterfallDisplay(IDisplay):
                 range = linear_range(len(power_spectrum), self.num_total_groups)
 
             self._range_indicies = float_to_indicies(range)
+            self._range_indicies = space_indicies(self._range_indicies)
 
         self._group_power = get_freq_powers_by_range(power_spectrum,
                                                      self._range_indicies,
@@ -93,11 +99,14 @@ class WaterfallDisplay(IDisplay):
         #print(f'n_groups: {len(group_power)} n_cutoff: {self.num_cutoff_groups}')
         for i in range(self.num_cutoff_groups, len(self._group_power)):
             #print(f'i: {i}')
+            self._mean_group_power_ema[i].add(self._group_power[i])
             i_pixel = self.pixel_indexer(0, i, self.settings)
             min_val = self.last_min_group_power[i] * 1.05  # Use the last min/max value before updating them
             max_val = self.last_max_group_power[i] * .95
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.001, self._group_power[i])
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * 0.999, self._group_power[i])
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, self._group_power[i],
+                                               self._mean_group_power_ema[i].ema_value)  # Slowly decay min/max
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, self._group_power[i],
+                                               self._mean_group_power_ema[i].ema_value)
             #print(f'min: {min_val:0.3f} max: {max_val:0.3f}')
             i_range, norm_value = map_power_to_range(self._group_power[i], min_val, max_val, range_cutoffs=waterfall_range_cutoffs)
             if i_range is None:

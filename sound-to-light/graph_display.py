@@ -6,7 +6,7 @@ from interfaces import IDisplay
 import ulab.numpy as np
 from display_settings import DisplaySettings
 from spectrum_shared import map_power_to_range, map_normalized_value_to_color, linear_range,\
-    map_float_color_to_neopixel_color, log_range, float_to_indicies, get_freq_powers_by_range, clip
+    map_float_color_to_neopixel_color, log_range, float_to_indicies, get_freq_powers_by_range, clip, space_indicies
 
 
 class GraphDisplay(IDisplay):
@@ -37,6 +37,9 @@ class GraphDisplay(IDisplay):
         self.last_max_group_power = [0] * self.num_cols
         self.last_min_group_power = [1 << 16] * self.num_cols
 
+        self._mean_group_power_ema = []
+        for i in range(0, self.num_cols):
+            self._mean_group_power_ema.append(ema.EMA(500, 1.5))
         # self.min_group_power_ema = []
         # self.max_group_power_ema = []
         # for i in range(0, self.num_cols):
@@ -71,6 +74,7 @@ class GraphDisplay(IDisplay):
                 range = linear_range(len(power_spectrum), self.num_total_groups)
 
             self._range_indicies = float_to_indicies(range)
+            self._range_indicies = space_indicies(self._range_indicies)
             print(f"Range indicies: {self._range_indicies} nEntries: {len(self._range_indicies)}")
 
         #std_spectrum = np.std(power_spectrum[128:])
@@ -102,12 +106,14 @@ class GraphDisplay(IDisplay):
             if i >= len(self._range_indicies) or i >= len(self._group_power):
                 break
 
+            self._mean_group_power_ema[i].add(self._group_power[i])
+
             #print(f"iCol: {i} Power: {self._group_power[i]}")
 
             min_val = self.last_min_group_power[i] * 1.05 #Use the last min/max value before updating them
             max_val = self.last_max_group_power[i] * 0.95
-            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, self._group_power[i]) #Slowly decay min/max
-            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, self._group_power[i])
+            self.last_min_group_power[i] = min(self.last_min_group_power[i] * 1.0005, self._group_power[i], self._mean_group_power_ema[i].ema_value) #Slowly decay min/max
+            self.last_max_group_power[i] = max(self.last_max_group_power[i] * .9995, self._group_power[i], self._mean_group_power_ema[i].ema_value)
 
             if min_val == max_val:
                 continue #Do not display since we don't have a range for the graph yet

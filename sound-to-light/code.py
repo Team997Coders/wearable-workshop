@@ -28,16 +28,25 @@ from pixel_indexers import *
 
 display_configs = {
     "32x8 Waterfall": DisplaySettings(num_rows=32, num_cols=8, pixel_indexer=columns_are_rows_with_alternating_column_order_indexer, log_scale=False),
-    "8x32 Graph": DisplaySettings(num_rows=8, num_cols=32, pixel_indexer=rows_are_columns_with_alternating_reversed_column_order_indexer, log_scale=True),
-    "8x4 Neopixel Feather Graph": DisplaySettings(num_rows=4, num_cols=8, pixel_indexer=flip_column_order_indexer, log_scale=False),
-    "8x4 Neopixel Feather Waterfall": DisplaySettings(num_rows=4, num_cols=8, pixel_indexer=flip_column_order_indexer, log_scale=True)
+    "8x32 Graph": DisplaySettings(num_rows=8, num_cols=32, pixel_indexer=rows_are_columns_with_alternating_reversed_column_order_indexer, log_scale=False),
+    "8x4 Neopixel Feather Graph": DisplaySettings(num_rows=4, num_cols=8, pixel_indexer=flip_column_order_indexer, log_scale=True),
+    "8x4 Neopixel Feather Waterfall": DisplaySettings(num_rows=4, num_cols=8, pixel_indexer=flip_column_order_indexer, log_scale=True),
+    "4x16 Graph": DisplaySettings(num_rows=8, num_cols=32,
+                                  pixel_indexer=rows_are_columns_with_alternating_reversed_column_order_indexer,
+                                  num_neo_rows=8, num_neo_cols=32,
+                                  log_scale=True),
+
 }
 
 sampling_settings = {
     "32x8 Waterfall": RecordingSettings(max_freq_hz=22000, frequency_cutoff=1280, sample_size_exp=10),
     "Low Frequency": RecordingSettings(max_freq_hz=22000, frequency_cutoff=400, sample_size_exp=10),
+    "Low-Mid Frequency": RecordingSettings(max_freq_hz=22000, frequency_cutoff=800, sample_size_exp=10),
     "Broad Frequency": RecordingSettings(max_freq_hz=22000, frequency_cutoff=4000, sample_size_exp=10),
 }
+
+#This combo is a good starting point
+#sample_settings = sampling_settings["Broad Frequency"]
 
 sample_settings = sampling_settings["Broad Frequency"]
 
@@ -55,6 +64,7 @@ displays = (
     WaterfallDisplay(pixels, display_configs["32x8 Waterfall"], 0),
     GraphDisplay(pixels_featherwing, display_configs["8x4 Neopixel Feather Graph"], 0),
     WaterfallDisplay(pixels_featherwing, display_configs["8x4 Neopixel Feather Waterfall"], 0),
+    GraphDisplay(pixels, display_configs["4x16 Graph"], 0)
 )
 
 def get_frequencies(settings: RecordingSettings):
@@ -80,7 +90,7 @@ async def Run(play_wave: bool):
     ########################################
 
     # Uncomment these lines to change how sound is displayed
-    display = displays[2]
+    display = displays[4]
 
     #######################################################
     # If you have a new display the functions below can
@@ -159,22 +169,24 @@ async def Run(play_wave: bool):
 
             #Convert to a numpy.array
             sample_buffer = np.array(mic_buffer)
+            #buffer_range = max_buffer_ema.ema_value - half_buffer_value
 
             #Adjust audio sample to a floating point array centered on 0
-            buffer_min = half_buffer_value #According to documentation no noise is halfway between the maximum value, so 2^15 for a range of 2^16
-            buffer_max = np.max(sample_buffer) #This should be the max of the absolute value, but abs is not built into Circuit Python
-            max_buffer_ema.add(buffer_max)
-            buffer_range = max_buffer_ema.ema_value - buffer_min
-            centering_adjustment = buffer_min + (buffer_range / 2)
-            #print(f'max {buffer_max} min {buffer_min} range {buffer_range} centering_adjustment {centering_adjustment}')
-            float_array = sample_buffer - centering_adjustment
+            #buffer_min = half_buffer_value #According to documentation no noise is halfway between the maximum value, so 2^15 for a range of 2^16
+            #buffer_max = np.max(sample_buffer) #This should be the max of the absolute value, but abs is not built into Circuit Python
+            #max_buffer_ema.add(buffer_max)
 
-            power_spectrum = ulab.utils.spectrogram(float_array)
-            #print(f'cutoff index: {max_freq_index} power_spectrum: {power_spectrum[:max_freq_index]}')
+            #centering_adjustment = half_buffer_value + (buffer_range / 2)
+            #print(f'max {buffer_max} min {buffer_min} range {buffer_range} centering_adjustment {centering_adjustment}')
+            #sample_buffer -= centering_adjustment
+            sample_buffer -= half_buffer_value
+
+            power_spectrum = ulab.utils.spectrogram(sample_buffer)
+            #print(f'cutoff index: {max_freq_index} power_spectrum: {power_spectrum[1:max_freq_index]}')
             #power_spectrum = power_spectrum[0:len(power_spectrum) // 2] # The array is mirrored, so only use half
             #power_spectrum = power_spectrum[len(power_spectrum) // 2:]  # The array is mirrored, so only use half
 
-            display.show(power_spectrum[:max_freq_index])
+            display.show(power_spectrum[1:max_freq_index])
             #sample_buffer = roll_buffer(sample_buffer, SAMPLE_BITE_SIZE)
             # time.sleep(0.5)
 
