@@ -27,6 +27,15 @@ Checkout adafruit's documentation directly https://learn.adafruit.com/using-circ
 
 
 
-## Plugging the circuit playground express / Gemma
+## Plugging in the circuit playground express / Gemma
 Use the USB cable to plug the device into your computer. The playground express / Gemma will show up as a USB drive to your computer. To find it **TODO** I don't actually know how to get to files on the chromebook.
+
+
+
+# CircuitPython
+
+CircuitPython is a slightly modified lightweight version of the python programming langauge for small electronics. For all sorts of more information about CircuitPython checkout this link [CircuitPython](https://learn.adafruit.com/welcome-to-circuitpython).
+
+For just the CircuitPython essentialy and documentation of functions see this link [CircuitPython Essentials](https://learn.adafruit.com/circuitpython-essentials/circuitpython-essentials)
+* CircuitPython [NeoPixel Guide](https://learn.adafruit.com/circuitpython-essentials/circuitpython-neopixel)
 
