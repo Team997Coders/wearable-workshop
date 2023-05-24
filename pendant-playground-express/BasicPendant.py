@@ -8,6 +8,7 @@ import time
 import board
 import digitalio
 from rainbowio import colorwheel
+import adafruit_fancyled.fastled_helpers as helper
 import neopixel
 
 
@@ -36,11 +37,62 @@ rightButtonPressed = False
 
 # initial location
 startIndex = 0
+pallete = None
+
+## Setup color palletes
+RainbowColors_p = [ 0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
+                    0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
+                    0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
+                    0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B]
+
+OceanColors_p = [   CRGB::MidnightBlue,
+                    CRGB::DarkBlue,
+                    CRGB::MidnightBlue,
+                    CRGB::Navy,
+               
+                    CRGB::DarkBlue,
+                    CRGB::MediumBlue,
+                    CRGB::SeaGreen,
+                    CRGB::Teal,
+
+                    CRGB::CadetBlue,
+                    CRGB::Blue,
+                    CRGB::DarkCyan,
+                    CRGB::CornflowerBlue,
+
+                    CRGB::Aquamarine,
+                    CRGB::SeaGreen,
+                    CRGB::Aqua,
+                    CRGB::LightSkyBlue]
+
 
 # Sound reactive setup
 # Based on Adafruit VU meter code
 
 ## TODO
+
+
+######### define custom functions
+
+# rainbow function
+def rainbow():
+    global startIndex
+    startIndex += 1 # this sets the motion speed.
+    if startIndex >= 255:
+        startIndex = 0
+
+    FillLEDsFromPaletteColors(startIndex)
+
+    pixels.show()
+    time.show(0.02)
+
+def FillLEDsFromPaletteColors(colorIndex):
+    # go through each pixels and set the color
+    for i in range(NUM_LEDS):
+        pixels[i] = helper.ColorFromPalette(palette, colorIndex, brightness, blend)
+
+
+######### Main loop
 
 # Loop forever
 while True:
@@ -68,25 +120,13 @@ while True:
 
     # set led mode
     if ledMode == 0:
-        #currentPalette = RainbowColors_p
+        pallete = RainbowColors_p
         rainbow()
     else:
         pixels.clear()
 # end loop
 
 
-
-# rainbow function
-def rainbow():
-    global startIndex
-    startIndex += 1 # this sets the motion speed.
-
-    FillLEDsFromPaletteColors(startIndex)
-
-    pixels.show()
-    time.show(0.02)
-
-def FillLEDsFromPaletteColors(colorIndex):
 
 
 
