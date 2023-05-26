@@ -71,26 +71,69 @@ RainbowColors_p = [ 0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
                     0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
                     0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B]
 
-OceanColors_p = [   CRGB::MidnightBlue,
-                    CRGB::DarkBlue,
-                    CRGB::MidnightBlue,
-                    CRGB::Navy,
+OceanColors_p = [   0x191970,
+                    0x00008B,
+                    0x191970,
+                    0x000080,
                
-                    CRGB::DarkBlue,
-                    CRGB::MediumBlue,
-                    CRGB::SeaGreen,
-                    CRGB::Teal,
+                    0x00008B,
+                    0x0000CD,
+                    0x2E8B57,
+                    0x008080,
 
-                    CRGB::CadetBlue,
-                    CRGB::Blue,
-                    CRGB::DarkCyan,
-                    CRGB::CornflowerBlue,
+                    0x5F9EA0,
+                    0x0000FF,
+                    0x008B8B,
+                    0x6495ED,
 
-                    CRGB::Aquamarine,
-                    CRGB::SeaGreen,
-                    CRGB::Aqua,
-                    CRGB::LightSkyBlue]
+                    0x7FFFD4,
+                    0x2E8B57,
+                    0x00FFFF,
+                    0x87CEFA]
 
+LavaColors_p = [0x000000,
+                0x800000,
+                0x000000,
+                0x800000,
+
+                0x8B0000,
+                0x800000,
+                0x8B0000,
+
+                0x8B0000,
+                0x8B0000,
+                0xFF0000,
+                0xFFA500,
+
+                0xFFFFFF,
+                0xFFA500,
+                0xFF0000,
+                0x8B0000]
+
+ForestColors_p = [  0x006400,
+                    0x006400,
+                    0x556B2F,
+                    0x006400,
+ 
+                    0x008000,
+                    0x228B22,
+                    0x6B8E23,
+                    0x008000,
+
+                    0x2E8B57,
+                    0x66CDAA,
+                    0x32CD32,
+                    0x9ACD32,
+
+                    0x90EE90,
+                    0x7CFC00,
+                    0x66CDAA,
+                    0x228B22]
+
+PartyColors_p = [   0x5500AB, 0x84007C, 0xB5004B, 0xE5001B,
+                    0xE81700, 0xB84700, 0xAB7700, 0xABAB00,
+                    0xAB5500, 0xDD2200, 0xF2000E, 0xC2003E,
+                    0x8F0071, 0x5F00A1, 0x2F00D0, 0x0007F9]
 
 # Sound reactive setup
 # Based on Adafruit VU meter code
@@ -156,7 +199,7 @@ def rainbow():
     FillLEDsFromPaletteColors(startIndex)
 
     pixels.show()
-    time.show(0.02)
+    time.sleep(0.02)
 
 def FillLEDsFromPaletteColors(colorIndex):
     global palette
@@ -206,9 +249,10 @@ while True:
 
     # left button cycles through modes
     if leftButtonPressed:
-        pixels.clear() # TODO
+        pixels.fill((0,0,0))
+        pixels.show()
         ledMode += 1 # increment led mode
-        time.show(0.3)
+        time.sleep(0.3)
 
         if ledMode >= NUM_MODES:
             ledMode = 0
@@ -217,7 +261,7 @@ while True:
     # right button controls brightness
     if rightButtonPressed:
         brightness += brightness_int
-        time.show(0.3)
+        time.sleep(0.3)
         if brightness > max_brightness:
             brightness = min_brightness
 
@@ -242,7 +286,8 @@ while True:
     elif ledMode == 5:
         soundreactive()
     else:
-        pixels.clear()
+        pixels.fill((0,0,0))
+        pixels.show()
 # end loop
 
 
