@@ -6,7 +6,7 @@ In this project we are going to show off the pybadger with a few different edita
 ## Instructions:
 
 1. Install the code editor following the instructions [here](README.md).
-2. Download the code repository [here] (https://github.com/Team997Coders/wearable-workshop)
+2. Download the code repository [here](https://github.com/Team997Coders/wearable-workshop)
     1. Click on *code* on the top right of the screen and select *Download ZIP*.
     2. Navigate to your downloads folder and extract the ZIP file.
     3. Navigate to the newly created folder and find light-up-badge/src/code.py file.
