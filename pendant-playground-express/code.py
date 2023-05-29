@@ -7,6 +7,7 @@
 import time
 import math
 import board
+import array
 import digitalio
 from rainbowio import colorwheel
 import audiobusio
@@ -15,10 +16,11 @@ import neopixel
 
 
 NUM_LEDS = 10
-brightness = 30.0/255.0 # initial brightness
-min_brightness = 10.0/255.0
-max_brightness = 180/255.0
-brightness_int = 40.0/255.0
+PEAK_COLOR = (100, 0, 255)
+brightness = 30.0 # initial brightness
+min_brightness = 10.0
+max_brightness = 180
+brightness_int = 40.0
 
 # number of audio samples to read at one time.
 NUM_SAMPLES = 100
@@ -30,7 +32,7 @@ NUM_MODES = 6 # change this number if you add or subtract modes
 ######################## Setup needed hardware
 
 # setup the neopixel strip
-pixels = neopixel.NeoPixel(board.NEOPIXEL, NUM_LEDS, brightness=0.2, auto_write=False)
+pixels = neopixel.NeoPixel(board.NEOPIXEL, NUM_LEDS, brightness=1.0, auto_write=False)
 
 
 # setup the microphone
@@ -55,7 +57,8 @@ rightButtonPressed = False
 
 # initial location
 startIndex = 0
-pallete = None
+palette = None
+peak = 0
 
 # audio sample array
 # This uses the slightly confusing python array library rather than a list for speed.
@@ -63,9 +66,9 @@ pallete = None
 # [0] * NUM_SAMPLES defines the starting array entries (NUM_SAMPLES 0's)
 samples = array.array('H', [0] * NUM_SAMPLES)
 
-#################### Define FastLED color palletes using python FancyLED.
+#################### Define FastLED color palettes using python FancyLED.
 
-## Setup color palletes
+## Setup color palettes
 RainbowColors_p = [ 0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
                     0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
                     0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
@@ -75,7 +78,7 @@ OceanColors_p = [   0x191970,
                     0x00008B,
                     0x191970,
                     0x000080,
-               
+
                     0x00008B,
                     0x0000CD,
                     0x2E8B57,
@@ -114,7 +117,7 @@ ForestColors_p = [  0x006400,
                     0x006400,
                     0x556B2F,
                     0x006400,
- 
+
                     0x008000,
                     0x228B22,
                     0x6B8E23,
@@ -180,7 +183,7 @@ input_floor = normalized_rms(samples) + 10
 # input_floor = 50
 
 # You might want to print the input_floor to help adjust other values.
-# print(input_floor)
+print(input_floor)
 
 # Corresponds to sensitivity: lower means more pixels light up with lower sound
 # Adjust this as you see fit.
@@ -203,15 +206,21 @@ def rainbow():
 
 def FillLEDsFromPaletteColors(colorIndex):
     global palette
+    global brightness
 
     # go through each pixels and set the color
     for i in range(NUM_LEDS):
-        pixels[i] = helper.ColorFromPalette(palette, colorIndex, brightness, blend=True)
+        c = helper.ColorFromPalette(palette, colorIndex, 255, blend=True)
+        c_tuple = (c.red*brightness, c.green*brightness, c.blue*brightness)
+        pixels[i] = c_tuple
 
 
 # directly taken from adafruit code.
 # https://learn.adafruit.com/adafruit-circuit-playground-express/playground-sound-meter
 def soundreactive():
+    global peak
+    global PEAK_COLOR
+
     # read the microphone
     mic.record(samples, len(samples))
 
@@ -221,20 +230,22 @@ def soundreactive():
 
     # Compute scaled logarithmic reading in the range 0 to NUM_PIXELS
     c = log_scale(constrain(magnitude, input_floor, input_ceiling),
-                  input_floor, input_ceiling, 0, NUM_PIXELS)
+                  input_floor, input_ceiling, 0, NUM_LEDS)
 
     # Light up pixels that are below the scaled and interpolated magnitude.
-    pixels.fill(0)
-    for i in range(NUM_PIXELS):
+    pixels.fill((0,0,0))
+    brig = brightness / 255.0
+    for i in range(NUM_LEDS):
         if i < c:
-            pixels[i] = volume_color(i)
+            vol_col = volume_color(i)
+            pixels[i] = (vol_col[0]*brig, vol_col[1]*brig, vol_col[2]*brig)
         # Light up the peak pixel and animate it slowly dropping.
         if c >= peak:
-            peak = min(c, NUM_PIXELS - 1)
+            peak = min(c, NUM_LEDS - 1)
         elif peak > 0:
             peak = peak - 1
         if peak > 0:
-            pixels[int(peak)] = PEAK_COLOR
+            pixels[int(peak)] = (PEAK_COLOR[0]*brig, PEAK_COLOR[1]*brig, PEAK_COLOR[2]*brig)
     pixels.show()
 
 
@@ -257,7 +268,7 @@ while True:
         if ledMode >= NUM_MODES:
             ledMode = 0
 
-    
+
     # right button controls brightness
     if rightButtonPressed:
         brightness += brightness_int
@@ -269,19 +280,19 @@ while True:
 
     # set led mode
     if ledMode == 0:
-        pallete = RainbowColors_p
+        palette = RainbowColors_p
         rainbow()
     elif ledMode == 1:
-        pallete = OceanColors_p
+        palette = OceanColors_p
         rainbow()
     elif ledMode == 2:
-        pallete = LavaColors_p
+        palette = LavaColors_p
         rainbow()
     elif ledMode == 3:
-        pallete = ForestColors_p
+        palette = ForestColors_p
         rainbow()
     elif ledMode == 4:
-        pallete = PartyColors_p
+        palette = PartyColors_p
         rainbow()
     elif ledMode == 5:
         soundreactive()
