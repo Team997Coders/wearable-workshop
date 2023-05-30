@@ -1,41 +1,39 @@
-# wearable-workshop
-Code for the 2023 CHS wearable workshop. This Readme has the basic instruction for installing
+# Circuit Playground IR Button
 
+In this project we are going to create a IR reactive button with the Circuit Playground Express (CPX)!  This project
+is much better when you do it with a friend :-).
 
-# Getting Started
-The circuit playground express and Gemma are neat little programmable boards from Adafruit. It is particularly designed to make it easy to design, make, and program wearable electronic projects. We are planning on using the CircuitPython environment to program these boards. For more information on documentation for using the Circuit Playground Express check out this Adafruit link: https://learn.adafruit.com/adafruit-circuit-playground-express
+## Instructions:
 
-## Download and Install CircuitPython (This step has already been done for you)
-Follow these instructions to install circuit python onto your Circuit Playground Express https://learn.adafruit.com/adafruit-circuit-playground-express/circuitpython-quickstart
+1. Install the code editor following the instructions [here](README.md).
+2. Download the code repository [here](https://github.com/Team997Coders/wearable-workshop)
+    1. Click on *code* on the top right of the screen and select *Download ZIP*.
+    2. Navigate to your downloads folder and extract the ZIP file.
+    3. Navigate to the newly created folder and find cpx-badge/src/code.py file.
+    4. Make sure your battery is charged.
+3. Download code to the CPX
+    1. Plug in the CPX using the USB cable into your computer. This should show up as a USB flashdrive.
+    2. Navigate to the USB flashdrive file folder.
+    3. Copy the cpx-badge/src/code.py file onto the flashdrive. You will need to overwrite the previous code.py.
+    4. The cpx should restart after a few seconds running the new code.py!
+    5. Test your code by pressing the buttons while having the cpx pointed at someone elese with another cpx-badge. 
+4. Install the battery and case
+    1. Get out the battery and the case from your kit.  
+    2. Get a button to mount your cpx onto and some double sided tape to attach it.
+    3. With the button facing up on a flat surface with the pin back aligned towards the top.
+    4. Using two small pieces of tape, attach the case with the small openings toward the top/bottom edge and the tabs
+          on the sides.
+    5. Put the battery in the center of the case with the wire leading out the opening in the bottom edge of the case.
+    6. Snap the CPX into the case with the black battery connector at the bottom.
+### Operation:
+Wear your badge and when you see someone wearning another one, press one of your buttons (be careful and don't cover up
+the IR leds when you press the button, it is best to try to press them from the side).
 
-If you are running Windows 7 or older, you may need to follow the instructions:
-https://learn.adafruit.com/adafruit-circuit-playground-express/adafruit2-windows-driver-installation
+There are two modes depending on which button you press:
+Button 'A' will cause a Rainbow patttern.
+Button 'B' will cause a Flashing Pattern.
 
-## Install an Editor
-We need to be able to edit code on the Circuit Playground Express, which needs a code editor. Skip to the relevant documentation for a Windows/Mac/Linux machine versus a Chromebook
-**For expert users**: Feel free to use your favorite editor, but it won’t have built-in support for getting debug statements.
+Enjoy!
 
-### Installing the Editor on Chromebooks
-We will need to install two programs to run the editor on chromebooks. 
-Caret Editor extension for Chrome https://chrome.google.com/webstore/detail/caret/fljalecfjciodhpcledpamjachpmelml?hl=en
-Beagle Term https://chrome.google.com/webstore/detail/beagle-term/gkdofhllgfohlddimiiildbgoggdpoea?hl=en
-
-The first allows us to edit files on the chromebook, the second lets us connect and see print statements.
-
-### Installing the Editor on Mac/Windows/Linux (Skip unless you are using Mac/Windows/Linux)
-Checkout adafruit's documentation directly https://learn.adafruit.com/using-circuit-playground-express-makecode-circuitpython-on-a-chromebook/using-circuitpython
-
-
-
-## Plugging in the circuit playground express / Gemma
-Use the USB cable to plug the device into your computer. The playground express / Gemma will show up as a USB drive to your computer. To find it **TODO** I don't actually know how to get to files on the chromebook.
-
-
-
-# CircuitPython
-
-CircuitPython is a slightly modified lightweight version of the python programming langauge for small electronics. For all sorts of more information about CircuitPython checkout this link [CircuitPython](https://learn.adafruit.com/welcome-to-circuitpython).
-
-For just the CircuitPython essentialy and documentation of functions see this link [CircuitPython Essentials](https://learn.adafruit.com/circuitpython-essentials/circuitpython-essentials)
-* CircuitPython [NeoPixel Guide](https://learn.adafruit.com/circuitpython-essentials/circuitpython-neopixel)
-
+# References:
+https://core-electronics.com.au/guides/circuit-playground/ir-controlled-lights-with-circuitpython-adafruit-circuit-playground-express-tutorial/
