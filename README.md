@@ -8,6 +8,11 @@ The circuit playground express and Gemma are neat little programmable boards fro
 ## Download and Install CircuitPython (This step has already been done for you)
 Follow these instructions to install circuit python onto your Circuit Playground Express https://learn.adafruit.com/adafruit-circuit-playground-express/circuitpython-quickstart
 
+First download and install the circuit python runtime (here)[https://circuitpython.org/board/circuitplayground_express/] to update this, press the reset button twice and hold. This will flash red then show up as a CPYBOOT drive. Drag the uf2 file you downloaded into the flashdrive and it will be installed.
+
+Download and install the needed adafruit libraries (here)[https://circuitpython.org/libraries] Then move the required libraries into the /lib/ folder on the CIRCUITPY drive.
+
+
 If you are running Windows 7 or older, you may need to follow the instructions:
 https://learn.adafruit.com/adafruit-circuit-playground-express/adafruit2-windows-driver-installation
 
