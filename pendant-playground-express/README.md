@@ -28,7 +28,7 @@ By the way. If you are running the default program you can toggle between a few 
     1. Click on *code* on the top right of the screen and select *Download ZIP*.
     2. Navigate to your downloads folder and extract the ZIP file.
     3. Navigate to the newly created folder and find pendant-playground-express/code.py file.
-3. (Possiblty done for you) Install the needed libraries
+3. (Possibly done for you) Install the needed libraries
     1. Copy the adafruit_fancyled folder in wearable-workshop/pendant-playground-express/lib/ to the CIRCUITPY drive to be in /lib/adafruit_fancyled. There should be no folders between the lib folder and the adafruit_fancyled folder.
 4. Download code to the pybadger
     1. Plug in the Circuit Playground Express using the USB cable into your computer. This should show up as a USB flashdrive.
