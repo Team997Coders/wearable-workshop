@@ -5,11 +5,18 @@ In this project we are going to show off the pybadger with a few different edita
 
 ## Instructions:
 
-1. Install the code editor following the instructions [here](README.md).
+1. Install the circuit python runtime for the pybadger (IMPORTANT, make sure you use this link as it's different for the pybadger rather than the circuit playground express)
+    1. First download the circuit python runtime, version 8.x stable [CircuitPython runtime](https://circuitpython.org/board/pybadge/)
+    2. Extract the files by right clicking and pressing extract here.
+    3. Press the reset button in the center of the playground express twice quickly. The LEDs will turn green and your computer should recognize a new USB drive called CPLAYBOOT.
+    4. Drag the .uf2 file you downloaded and extracted into the CPLAYBOOT drive. The board should flash then reboot.
+    5. If your board reboots and shows up as a USB media called CIRCUITPY then you have done it correctly!
 2. Download the code repository [here](https://github.com/Team997Coders/wearable-workshop)
     1. Click on *code* on the top right of the screen and select *Download ZIP*.
     2. Navigate to your downloads folder and extract the ZIP file.
     3. Navigate to the newly created folder and find light-up-badge/src/code.py file.
+3. Install the needed libraries on the pyabdger. (Possibly done for you)
+    1. Copy the all of the folders and files in wearable-workshop/light-up-badge/lib/ to the CIRCUITPY drive to be in /lib/.
 3. Download code to the pybadger
     1. Turn off the pybadger
     2. Plug in the pybadger using the USB cable into your computer. This should show up as a USB flashdrive.

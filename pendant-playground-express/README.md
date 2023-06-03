@@ -18,15 +18,24 @@ By the way. If you are running the default program you can toggle between a few 
 
 ## Step three Download a new program (optional)
 
-1. Download the code repository [here](https://github.com/Team997Coders/wearable-workshop)
+1. (Possibly done for you) Install the circuitpython runtime.
+    1. First download the circuit python runtime, version 8.x [CircuitPython runtime](https://circuitpython.org/board/circuitplayground_express/)
+    2. Extract the files by right clicking and pressing extract here.
+    3. Press the reset button in the center of the playground express twice quickly. The LEDs will turn green and your computer should recognize a new USB drive called CPLAYBOOT.
+    4. Drag the .uf2 file you downloaded and extracted into the CPLAYBOOT drive. The board should flash then reboot.
+    5. If your board reboots and shows up as a USB media called CIRCUITPY then you have done it correctly!
+2. Download the code repository [here](https://github.com/Team997Coders/wearable-workshop)
     1. Click on *code* on the top right of the screen and select *Download ZIP*.
     2. Navigate to your downloads folder and extract the ZIP file.
     3. Navigate to the newly created folder and find pendant-playground-express/code.py file.
-2. Download code to the pybadger
+3. (Possibly done for you) Install the needed libraries
+    1. Copy the adafruit_fancyled folder in wearable-workshop/pendant-playground-express/lib/ to the CIRCUITPY drive to be in /lib/adafruit_fancyled. There should be no folders between the lib folder and the adafruit_fancyled folder.
+4. Download code to the pybadger
     1. Plug in the Circuit Playground Express using the USB cable into your computer. This should show up as a USB flashdrive.
     2. Navigate to the USB flashdrive file folder.
-    3. Copy the pendant-playground-express/code.py file onto the flashdrive. You will need to overwrite the previous code.py.
-    4. The Circuit Playground Expressl after a few second should start running the new code.py!
+    3. Delete the code.py file on the CIRCUITPY drive
+    4. Copy the pendant-playground-express/code.py file onto the flashdrive.
+    5. The Circuit Playground Express after a few second should start running the new code.py!
 
 ## Step Four – Add the cover
 
